@@ -1,0 +1,248 @@
+---
+title: "Retrospecitve_markdown"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+```{r Functions for state-space stock-recruitment models, cache=TRUE, echo=FALSE}
+
+# source functions
+source("Yuk_harv_div_functions.R")
+
+```
+
+
+
+```{r output file paths, echo=FALSE}
+
+# create path for exporting figures
+figure_path <- "outputs/Figure_outputs"
+
+
+
+# obtain time-stamp (used for time-stamping outputs)
+system_time <- format(Sys.time(),"%Y-%m-%d")
+
+```
+
+
+
+```{r  load run size data from Landmark, echo=FALSE }
+
+
+load("data/runSize.Rdata")
+
+# head(runSize)
+
+```
+
+
+
+```{r create Scenario A: Model Based Run Reconstruction (Landmark), echo=FALSE}
+
+# MATT NOTE:  remove RR data processing chunks from this markdown documnet, and put back into Yukon data processing for MSSR R file ... for both RR scenarios. ... then, in this markdown documnet, just source what is needed from the MSSR R file. This is separating data processing for MSSR and then the downstream analyses and figures in this markdown doc
+
+
+load("./data/runSize.Rdata")
+agg_data <- read.csv("./data/age_and_harvest_data.csv")
+agg_data <- subset(agg_data, year>1984 & year <2017)
+CDN_u <- agg_data$yk_rv_har/(agg_data$spwn+agg_data$yk_rv_har)# CDN exploitation rate
+
+# --- set values for list ----------------------------------------------------------------------------------
+  ns <- 8
+  
+  nt <- 32
+  
+  na <- 4
+  
+  a_max <- 7
+  
+  C_tot_t_obs <- agg_data$total_har
+    
+  tau_C_obs <- round(C_tot_t_obs*0.15)#use CV of 0.15 (SE X sqrt(n)) = SD; SD^2 = var; CV = SD/mean; SD = CV*mean
+    
+  v <- rep(1,8)
+    
+  S_obs <- round(runSize$MLE*(1-rep(CDN_u,8)),0)
+  
+  S_obs_t <- rep(1:nt,8)
+  
+  S_obs_s <- sort(rep(1:8,nt))
+  
+  S_obs_n <- length(S_obs_s)
+  
+  tau_S_obs <- round(runSize$SE*(1-rep(CDN_u,8)),0)
+  
+  x_tas_obs <- round(agg_data[,14:17]*100); colnames(x_tas_obs) <- c("a4", "a5", "a6", "a7"); rownames(x_tas_obs) <- seq(1985,2016)
+  
+  ESS_ts <- matrix(NA,32,1); ESS_ts[,1] <- (rowSums(x_tas_obs)); rownames(ESS_ts) <- seq(1985,2016); colnames(ESS_ts) <- c("aggregate"); ESS_ts <- as.data.frame(ESS_ts)
+
+  R_wish <- matrix(0,ns,ns)
+  
+  diag(R_wish) <- rep(1,8)
+  
+  df_wish <- 9
+ 
+# --- create list ----------------------------------------------------------------------------------
+Yukon_chinook_data_for_BS <- list("ns" = ns, 
+                                "nt" = nt, 
+                                "na" = na, 
+                                "a_max" = a_max,
+                                "C_tot_t_obs" = C_tot_t_obs,
+                                "tau_C_obs" = tau_C_obs,
+                                "v" = v,
+                                "S_obs" = S_obs, 
+                                "S_obs_t" = S_obs_t,
+                                "S_obs_s" = S_obs_s,
+                                "S_obs_n" = S_obs_n,
+                                "tau_S_obs" = tau_S_obs,
+                                "x_tas_obs" = x_tas_obs,
+                                "ESS_ts" = ESS_ts,
+                                "R_wish" = R_wish, 
+                                "df_wish" = df_wish) 
+
+saveRDS(Yukon_chinook_data_for_BS,"./outputs/Yukon_data_for_BS_July24_2019.RDS")
+
+
+```
+
+
+
+
+
+```{r   create Scenario B: Data Based Run Reconstruction, echo=FALSE}
+# uses the observed aggregate spawner abundances * GSI substock proportions to get annual substock spawner abundances
+
+
+age_and_harvest <- read.csv("data/age_and_harvest_data.csv")
+
+# trim data to year range 1985-2016
+age_and_harvest_trim <- age_and_harvest %>% filter(year %in% c(1985:2016)) %>%
+  rename(Carmacks = Yukon.Carmacks,
+         LowerMainstem = Yukon.Lower.Canadian,
+         MiddleMainstem = Yukon.mainstem,
+         Pelly = Yukon.Pelly,
+         Stewart = Yukon.Stewart,
+         Teslin = Yukon.Teslin,
+         UpperLakesAndMainstem = Yukon.upper,
+         WhiteDonjek = Yukon.White.Donjek)
+
+
+# create dataframe with additional column of spawner observations by substock
+ScenarioB_spwn <- age_and_harvest_trim %>%
+  select(year, spwn, UpperLakesAndMainstem:WhiteDonjek) %>%
+  gather(key = population, value = proportion, UpperLakesAndMainstem:WhiteDonjek) %>%
+  mutate(spwn_substock = round(spwn*proportion)) %>%
+  arrange(population, year)
+
+
+# --- set values for list ----------------------------------------------------------------------------------
+
+ns <- 8 # number of pops
+  
+nt <- 32 # number of years
+  
+na <- 4 # number af age classes
+  
+a_max <- 7 # maximum age at maturity
+  
+C_tot_t_obs <- age_and_harvest_trim$total_har # observed aggregate harvest
+    
+tau_C_obs <- round(C_tot_t_obs*0.15) # uncertainty in harvest
+    
+v <- rep(1,8) # harvest vulnerability vector
+
+S_obs <- as.vector(ScenarioB_spwn$spwn_substock)
+
+S_obs_t <- rep(1:nt,8) # time steps associated with spawner observations
+  
+S_obs_s <- sort(rep(1:8,nt)) # substock the spawner observations correspond to
+  
+S_obs_n <- length(S_obs_s) # total number of spawning observations
+  
+tau_S_obs <- round(S_obs*0.15) # uncertianty in spawner observations (15%)
+  
+x_tas_obs <- round(age_and_harvest_trim[,14:17]*100); 
+colnames(x_tas_obs) <- c("a4", "a5", "a6", "a7"); 
+rownames(x_tas_obs) <- seq(1985,2016) # age samples
+  
+ESS_ts <- matrix(NA,32,1); ESS_ts[,1] <- (rowSums(x_tas_obs)); rownames(ESS_ts) <- seq(1985,2016); colnames(ESS_ts) <- c("aggregate"); ESS_ts <- as.data.frame(ESS_ts) # effective sample size for age samples
+
+R_wish <- matrix(0,ns,ns) # wishhart variance covariance matrix
+  
+diag(R_wish) <- rep(1,8) # diaganol for the var/covar matrix
+  
+df_wish <- 9 # degrees of freedom for the var/covar matrix
+ 
+
+# --- create list ----------------------------------------------------------------------------------
+Yukon_chinook_data_for_BS_ScenB.RR <- list("ns" = ns, 
+                                "nt" = nt, 
+                                "na" = na, 
+                                "a_max" = a_max,
+                                "C_tot_t_obs" = C_tot_t_obs,
+                                "tau_C_obs" = tau_C_obs,
+                                "v" = v,
+                                "S_obs" = S_obs, 
+                                "S_obs_t" = S_obs_t,
+                                "S_obs_s" = S_obs_s,
+                                "S_obs_n" = S_obs_n,
+                                "tau_S_obs" = tau_S_obs,
+                                "x_tas_obs" = x_tas_obs,
+                                "ESS_ts" = ESS_ts,
+                                "R_wish" = R_wish, 
+                                "df_wish" = df_wish) 
+
+saveRDS(Yukon_chinook_data_for_BS_ScenB.RR,"./outputs/Yukon_data_for_BS_ScenB.RR_July31.RDS")
+
+
+```
+
+
+```{r dataframe for plotting different RRs against each other,echo=FALSE}
+ScenA_spwn <- Yukon_chinook_data_for_BS$S_obs
+
+ScenB_spwn <- Yukon_chinook_data_for_BS_ScenB.RR$S_obs
+
+year <- rep(c(1985:2016),8)
+
+pop <- rep(c("Carmacks","LowerMainstem","MiddleMainstem","Pelly",
+             "Stewart","Teslin","UpperLakesAndMainstem","WhiteDonjek"),32)
+
+df <- data.frame(year,pop,ScenA_spwn, ScenB_spwn)
+
+```
+
+
+```{r plot ScenarioA and ScenarioB spwner abundances by substock,echo=FALSE,fig.width=4,fig.height=4}
+
+
+
+ggplot(df, aes(x=ScenA_spwn/1000, y=ScenB_spwn/1000,color=as.factor(year))) +
+  geom_point(size=2.5) +
+  geom_abline(slope=1, intercept=0, lty="dotted") +
+  xlab("Model-based spawners (000s)") +
+  ylab("Data-based spawners (000s)") +
+  #scale_x_continuous(limits = c(0,40)) +
+  #scale_y_continuous(limits = c(0,40)) +
+  facet_wrap(~pop,ncol=3,scales="free") +
+  theme_bw() +
+  theme(#legend.position = "none",
+        aspect.ratio = 1)
+
+
+
+```
+
+
