@@ -24,10 +24,19 @@ source("Yuk_harv_div_functions.R")
 
 
 
-```{r output file paths, echo=FALSE}
+```{r libraries to load, cache=TRUE, echo=FALSE, message=FALSE}
+
+# source libraries
+source("retrospective_load.R")
+
+```
+
+
+
+```{r create output file paths, echo=FALSE}
 
 # create path for exporting figures
-figure_path <- "outputs/Figure_outputs"
+figure_path <- "figures"
 
 
 
@@ -38,185 +47,36 @@ system_time <- format(Sys.time(),"%Y-%m-%d")
 
 
 
-```{r  load run size data from Landmark, echo=FALSE }
+```{r load Scenario A: Model Based Run Reconstruction (Landmark), echo=FALSE,eval=TRUE}
 
+# NOTE:  Only load one Run Reconstruction Scenario at a time to progress through the downstream analyses and figures
+# Use the 'eval' option to turn on/off the Scenarios that are of interest for a particular run
 
-load("data/runSize.Rdata")
-
-# head(runSize)
+ScenA_RR <- readRDS("outputs/Yukon_data_for_BS_ScenA.RR_July312019.RDS")
 
 ```
 
 
+```{r load Scenario B: Data Based Run Reconstruction, echo=FALSE,eval=FALSE}
 
-```{r create Scenario A: Model Based Run Reconstruction (Landmark), echo=FALSE}
+# NOTE:  Only load one Run Reconstruction Scenario at a time to progress through the downstream analyses and figures
+# Use the 'eval' option to turn on/off the Scenarios that are of interest for a particular run
 
-# MATT NOTE:  remove RR data processing chunks from this markdown documnet, and put back into Yukon data processing for MSSR R file ... for both RR scenarios. ... then, in this markdown documnet, just source what is needed from the MSSR R file. This is separating data processing for MSSR and then the downstream analyses and figures in this markdown doc
-
-
-load("./data/runSize.Rdata")
-agg_data <- read.csv("./data/age_and_harvest_data.csv")
-agg_data <- subset(agg_data, year>1984 & year <2017)
-CDN_u <- agg_data$yk_rv_har/(agg_data$spwn+agg_data$yk_rv_har)# CDN exploitation rate
-
-# --- set values for list ----------------------------------------------------------------------------------
-  ns <- 8
-  
-  nt <- 32
-  
-  na <- 4
-  
-  a_max <- 7
-  
-  C_tot_t_obs <- agg_data$total_har
-    
-  tau_C_obs <- round(C_tot_t_obs*0.15)#use CV of 0.15 (SE X sqrt(n)) = SD; SD^2 = var; CV = SD/mean; SD = CV*mean
-    
-  v <- rep(1,8)
-    
-  S_obs <- round(runSize$MLE*(1-rep(CDN_u,8)),0)
-  
-  S_obs_t <- rep(1:nt,8)
-  
-  S_obs_s <- sort(rep(1:8,nt))
-  
-  S_obs_n <- length(S_obs_s)
-  
-  tau_S_obs <- round(runSize$SE*(1-rep(CDN_u,8)),0)
-  
-  x_tas_obs <- round(agg_data[,14:17]*100); colnames(x_tas_obs) <- c("a4", "a5", "a6", "a7"); rownames(x_tas_obs) <- seq(1985,2016)
-  
-  ESS_ts <- matrix(NA,32,1); ESS_ts[,1] <- (rowSums(x_tas_obs)); rownames(ESS_ts) <- seq(1985,2016); colnames(ESS_ts) <- c("aggregate"); ESS_ts <- as.data.frame(ESS_ts)
-
-  R_wish <- matrix(0,ns,ns)
-  
-  diag(R_wish) <- rep(1,8)
-  
-  df_wish <- 9
- 
-# --- create list ----------------------------------------------------------------------------------
-Yukon_chinook_data_for_BS <- list("ns" = ns, 
-                                "nt" = nt, 
-                                "na" = na, 
-                                "a_max" = a_max,
-                                "C_tot_t_obs" = C_tot_t_obs,
-                                "tau_C_obs" = tau_C_obs,
-                                "v" = v,
-                                "S_obs" = S_obs, 
-                                "S_obs_t" = S_obs_t,
-                                "S_obs_s" = S_obs_s,
-                                "S_obs_n" = S_obs_n,
-                                "tau_S_obs" = tau_S_obs,
-                                "x_tas_obs" = x_tas_obs,
-                                "ESS_ts" = ESS_ts,
-                                "R_wish" = R_wish, 
-                                "df_wish" = df_wish) 
-
-saveRDS(Yukon_chinook_data_for_BS,"./outputs/Yukon_data_for_BS_July24_2019.RDS")
-
+ScenB_RR <- readRDS("outputs/Yukon_data_for_BS_ScenB.RR_July312019.RDS")
 
 ```
 
 
 
 
-
-```{r   create Scenario B: Data Based Run Reconstruction, echo=FALSE}
-# uses the observed aggregate spawner abundances * GSI substock proportions to get annual substock spawner abundances
-
-
-age_and_harvest <- read.csv("data/age_and_harvest_data.csv")
-
-# trim data to year range 1985-2016
-age_and_harvest_trim <- age_and_harvest %>% filter(year %in% c(1985:2016)) %>%
-  rename(Carmacks = Yukon.Carmacks,
-         LowerMainstem = Yukon.Lower.Canadian,
-         MiddleMainstem = Yukon.mainstem,
-         Pelly = Yukon.Pelly,
-         Stewart = Yukon.Stewart,
-         Teslin = Yukon.Teslin,
-         UpperLakesAndMainstem = Yukon.upper,
-         WhiteDonjek = Yukon.White.Donjek)
-
-
-# create dataframe with additional column of spawner observations by substock
-ScenarioB_spwn <- age_and_harvest_trim %>%
-  select(year, spwn, UpperLakesAndMainstem:WhiteDonjek) %>%
-  gather(key = population, value = proportion, UpperLakesAndMainstem:WhiteDonjek) %>%
-  mutate(spwn_substock = round(spwn*proportion)) %>%
-  arrange(population, year)
-
-
-# --- set values for list ----------------------------------------------------------------------------------
-
-ns <- 8 # number of pops
-  
-nt <- 32 # number of years
-  
-na <- 4 # number af age classes
-  
-a_max <- 7 # maximum age at maturity
-  
-C_tot_t_obs <- age_and_harvest_trim$total_har # observed aggregate harvest
-    
-tau_C_obs <- round(C_tot_t_obs*0.15) # uncertainty in harvest
-    
-v <- rep(1,8) # harvest vulnerability vector
-
-S_obs <- as.vector(ScenarioB_spwn$spwn_substock)
-
-S_obs_t <- rep(1:nt,8) # time steps associated with spawner observations
-  
-S_obs_s <- sort(rep(1:8,nt)) # substock the spawner observations correspond to
-  
-S_obs_n <- length(S_obs_s) # total number of spawning observations
-  
-tau_S_obs <- round(S_obs*0.15) # uncertianty in spawner observations (15%)
-  
-x_tas_obs <- round(age_and_harvest_trim[,14:17]*100); 
-colnames(x_tas_obs) <- c("a4", "a5", "a6", "a7"); 
-rownames(x_tas_obs) <- seq(1985,2016) # age samples
-  
-ESS_ts <- matrix(NA,32,1); ESS_ts[,1] <- (rowSums(x_tas_obs)); rownames(ESS_ts) <- seq(1985,2016); colnames(ESS_ts) <- c("aggregate"); ESS_ts <- as.data.frame(ESS_ts) # effective sample size for age samples
-
-R_wish <- matrix(0,ns,ns) # wishhart variance covariance matrix
-  
-diag(R_wish) <- rep(1,8) # diaganol for the var/covar matrix
-  
-df_wish <- 9 # degrees of freedom for the var/covar matrix
- 
-
-# --- create list ----------------------------------------------------------------------------------
-Yukon_chinook_data_for_BS_ScenB.RR <- list("ns" = ns, 
-                                "nt" = nt, 
-                                "na" = na, 
-                                "a_max" = a_max,
-                                "C_tot_t_obs" = C_tot_t_obs,
-                                "tau_C_obs" = tau_C_obs,
-                                "v" = v,
-                                "S_obs" = S_obs, 
-                                "S_obs_t" = S_obs_t,
-                                "S_obs_s" = S_obs_s,
-                                "S_obs_n" = S_obs_n,
-                                "tau_S_obs" = tau_S_obs,
-                                "x_tas_obs" = x_tas_obs,
-                                "ESS_ts" = ESS_ts,
-                                "R_wish" = R_wish, 
-                                "df_wish" = df_wish) 
-
-saveRDS(Yukon_chinook_data_for_BS_ScenB.RR,"./outputs/Yukon_data_for_BS_ScenB.RR_July31.RDS")
-
-
-```
 
 
 ```{r dataframe for plotting different RRs against each other,echo=FALSE}
-ScenA_spwn <- Yukon_chinook_data_for_BS$S_obs
-
-ScenB_spwn <- Yukon_chinook_data_for_BS_ScenB.RR$S_obs
+# Restore the different RR spawner data objects
+ScenA_spwn <- readRDS(file = "outputs/ScenarioA_RR_spawners.RDS")
+ScenB_spwn <- readRDS(file = "outputs/ScenarioB_RR_spawners.RDS")
 
 year <- rep(c(1985:2016),8)
-
 pop <- rep(c("Carmacks","LowerMainstem","MiddleMainstem","Pelly",
              "Stewart","Teslin","UpperLakesAndMainstem","WhiteDonjek"),32)
 
@@ -225,8 +85,7 @@ df <- data.frame(year,pop,ScenA_spwn, ScenB_spwn)
 ```
 
 
-```{r plot ScenarioA and ScenarioB spwner abundances by substock,echo=FALSE,fig.width=4,fig.height=4}
-
+```{r plot Figure S1 - ScenarioA and ScenarioB spwner abundances by substock,echo=FALSE,fig.width=6,fig.height=6}
 
 
 ggplot(df, aes(x=ScenA_spwn/1000, y=ScenB_spwn/1000,color=as.factor(year))) +
@@ -234,15 +93,1038 @@ ggplot(df, aes(x=ScenA_spwn/1000, y=ScenB_spwn/1000,color=as.factor(year))) +
   geom_abline(slope=1, intercept=0, lty="dotted") +
   xlab("Model-based spawners (000s)") +
   ylab("Data-based spawners (000s)") +
-  #scale_x_continuous(limits = c(0,40)) +
-  #scale_y_continuous(limits = c(0,40)) +
+  labs(colour= "Year") +
   facet_wrap(~pop,ncol=3,scales="free") +
   theme_bw() +
   theme(#legend.position = "none",
         aspect.ratio = 1)
+ggsave(file.path(figure_path, paste("Figure_S1.spawner.compare_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
+
+
+
+```{r Figure 3, echo=FALSE}
+# Figure 3. Daily estimates of border passage and scale sampling ####
+
+
+# read in border counts (fish wheel and sonar)
+border_counts <- read.delim("data/input_bordercounts2.txt")
+
+
+
+# modify border counts data frame
+# sum border counts by year
+# View(border_counts %>%
+#       na.omit() %>%
+#       group_by(year) %>%
+#       summarise(sum = sum(count)))
+
+
+# add column of counts per year to new dataframe bc2
+bc2 <- border_counts %>% 
+  mutate(sum = case_when(year == "1985" ~ 1321,
+                         year == "1986" ~ 1998,
+                         year == "1987" ~ 938,
+                         year == "1988" ~ 976,
+                         year == "1989" ~ 1065,
+                         year == "1990" ~ 1361,
+                         year == "1991" ~ 1726,
+                         year == "1992" ~ 1889,
+                         year == "1993" ~ 1241,
+                         year == "1994" ~ 1290,
+                         year == "1995" ~ 2215,
+                         year == "1996" ~ 1749,
+                         year == "1997" ~ 2221,
+                         year == "1998" ~ 1080,
+                         year == "1999" ~ 914,
+                         year == "2000" ~ 1494,
+                         year == "2001" ~ 3986,
+                         year == "2002" ~ 1065,
+                         year == "2003" ~ 1276,
+                         year == "2004" ~ 1361,
+                         year == "2005" ~ 81529,
+                         year == "2006" ~ 73691,
+                         year == "2007" ~ 41697,
+                         year == "2008" ~ 38097,
+                         year == "2009" ~ 69963,
+                         year == "2010" ~ 35074,
+                         year == "2011" ~ 51271,
+                         year == "2012" ~ 34747,
+                         year == "2013" ~ 30725,
+                         year == "2014" ~ 63462,
+                         year == "2015" ~ 84015,
+                         year == "2016" ~ 72329))
+
+
+# change year and julian to different classes
+bc2$year <- as.factor(bc2$year)
+bc2$julian <- as.double(bc2$julian)
+
+
+# create adjusted julian column to account for mismatch in 
+bc2_b <- bc2 %>%
+  mutate(revised_julian = case_when(count_type == "sonar" ~ julian,
+                                    count_type == "fish_wheel" ~ julian + 1))
+
+
+# create proportion of total run count per julian day count
+bc2_b$prop <- NA
+bc2_b$prop <- bc2$count/bc2$sum
+
+
+
+
+# read in Genetic Stock ID data from fish collected at border 
+# ("probability" is the probability individual fish originated from stock X)
+GSI <- read.csv("data/input_Yukon_GSI_82_05_longform2.csv")
+
+# modify individual GSI assignment dataframe
+GSI.region <- subset(GSI, prob > 0.4)
+
+# create data frame of number of samples per day and year 
+GSI.counts <- plyr::ddply(GSI.region,c("year","julian_date"),function(x){
+  count <- dim(x)[1]
+  data.frame(count)
+})
+
+# add column of gsi counts per year to new dataframe: only keep samples with prob > 0.5
+gsi2 <- GSI.counts %>% 
+  dplyr::mutate(year_count = case_when(year == "1982" ~ 124,
+                                       year == "1983" ~ 141,
+                                       year == "1985" ~ 149,
+                                       year == "1986" ~ 149,
+                                       year == "1987" ~ 148,
+                                       year == "1991" ~ 147,
+                                       year == "1992" ~ 149,
+                                       year == "1993" ~ 149,
+                                       year == "1994" ~ 149,
+                                       year == "1995" ~ 149,
+                                       year == "1996" ~ 144,
+                                       year == "1997" ~ 150,
+                                       year == "1998" ~ 0,
+                                       year == "1999" ~ 147,
+                                       year == "2000" ~ 148,
+                                       year == "2001" ~ 149,
+                                       year == "2002" ~ 150,
+                                       year == "2003" ~ 148,
+                                       year == "2004" ~ 131,
+                                       year == "2005" ~ 142,
+                                       year == "2006" ~ 150,
+                                       year == "2007" ~ 149,
+                                       year == "2008" ~ 452,
+                                       year == "2009" ~ 646,
+                                       year == "2010" ~ 467,
+                                       year == "2011" ~ 497,
+                                       year == "2012" ~ 344,
+                                       year == "2013" ~ 290,
+                                       year == "2014" ~ 708,
+                                       year == "2015" ~ 1026,
+                                       year == "2016" ~ 728))
+
+# create proportion of total run count per julian day count
+gsi2$prop <- NA
+gsi2$prop <- gsi2$count/gsi2$year_count
+
+
+# create sample size number dataframe for geom_text in plot
+dat_text <- data.frame(label = c("124", "141", "149","149", "148", "147",
+                                 "149", "149", "149","149", "144", "150", "147", "148",
+                                 "149", "150", "148","131", "142","150","149","452","646",
+                                 "467","497","344","290","708","1026","728"),
+                       year = c(1982,1983,1985,1986,1987,1991,
+                                1992,1993,1994,1995,1996,1997, 1999,2000,
+                                2001,2002,2003,2004,2005,2006, 2007,2008,2009,
+                                2010,2011,2012,2013,2014,2015,2016))
+
+# Run size distribution and GSI size and distribution, memo Fig 2
+n <- c(1982:1987,1991:1997,1999:2016)
+bc3 <- bc2_b %>%
+  filter(year %in% n)
+
+gsi3 <- gsi2 %>%
+  filter(year %in% n)
+
+
+
+# plot figure border counts and gsi sample size 
+ggplot(bc3, aes(x=revised_julian, y = prop)) +
+  geom_bar(stat = "identity") +
+  geom_bar(data = gsi3 %>% filter(julian_date < 1000), aes(x=julian_date, y=prop), 
+           fill="red", alpha=0.5, stat = "identity") +
+  scale_x_continuous(limits=c(150,300), breaks = c(150,175,200,225,250,275,300)) +
+  xlab("Julian day") +
+  ylab("Run size and GSI sample size") +
+  facet_wrap(~year, scales = "free_y") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size=9, angle = 45, hjust = 1)) +
+  theme(strip.text = element_text(size=10)) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  geom_text(data = dat_text, mapping = aes(x = -Inf, y = -Inf, label = label),
+            hjust = -0.3, vjust = -3, size=2.5)
+ggsave(file.path(figure_path, paste("Figure_3.border.count_",system_time,".pdf", sep="")),height = 5, width = 7)
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r  Prep Population border passage over time for ScenarioA Run Reconstruction, echo=FALSE}
+load("./data/runSize.Rdata")
+
+
+ScenA_data <- runSize %>%
+  group_by(year) %>%
+  mutate(run = sum(MLE)) %>%
+  ungroup() %>%
+  mutate(proportion = MLE/run,
+         se_prop = SE/MLE,
+         lwr_1 = proportion - se_prop,
+         upr_1 = proportion + se_prop,
+         lwr = case_when(lwr_1 < 0 ~ 0,
+                         lwr_1 > 0 ~ lwr_1),
+         upr = case_when(upr_1 < 1 ~ upr_1,
+                         upr_1 > 1 ~ 1)) %>%
+  select(-lwr_1, -upr_1) %>%
+  distinct() %>%
+  as.data.frame()
+
+
+
+# stock compositions for Scenario B data-based GSI proportions
+age_and_harvest <- read.csv("data/age_and_harvest_data.csv")
+
+StandDev_df <- age_harv_modified %>%
+  select(year, Carmacks.sd:WhiteDonjek.sd) %>%
+  mutate(value_class = "sd") %>%
+  select(year, value_class, Carmacks.sd:WhiteDonjek.sd) %>%
+  gather(key=population, value = sd, Carmacks.sd:WhiteDonjek.sd) %>%
+  mutate(population = str_remove_all(population, ".sd")) %>%
+  select(-value_class)
+
+ScenB_data1 <- age_and_harvest %>%
+  filter(year != 2017) %>%
+  rename(Carmacks = Yukon.Carmacks,
+         LowerMainstem = Yukon.Lower.Canadian,
+         MiddleMainstem = Yukon.mainstem,
+         Pelly = Yukon.Pelly,
+         Stewart = Yukon.Stewart,
+         Teslin = Yukon.Teslin,
+         UpperLakesandMainstem = Yukon.upper,
+         WhiteDonjek = Yukon.White.Donjek) %>%
+  gather(key=population, value = proportion, UpperLakesandMainstem:WhiteDonjek) %>%
+  select(year, run, population, proportion) %>%
+  mutate(pop_run = round(run*proportion))
+
+
+ScenB_data1 <- full_join(StandDev_df, ScenB_data1) %>%
+  mutate(run_sd = round(sd*run)) %>%
+  mutate(lwr_1 = proportion - sd,
+         upr_1 = proportion + sd,
+         lwr = case_when(lwr_1 < 0 ~ 0,
+                         lwr_1 > 0 ~ lwr_1),
+         upr = case_when(upr_1 < 100 ~ upr_1,
+                         upr_1 > 100 ~ 100)) %>%
+  select(-lwr_1, -upr_1) %>%
+  na.omit() %>%
+  distinct()
+
+
+# create infill data frame
+year <- rep(c(1984, 1988:1990, 1998), times=8)
+population <- rep(c("Carmacks","LowerMainstem","MiddleMainstem","Pelly","Stewart","Teslin","UpperLakesandMainstem","WhiteDonjek" ), each=5)
+sd <- rep(c(0),each=40)
+run <- rep(c(0),each=40)
+proportion <- rep(c(0),each=40)
+pop_run <- rep(c(0),each=40)
+run_sd <- rep(c(0),each=40)
+lwr <- rep(c(0),each=40)
+upr <- rep(c(0),each=40)
+
+
+infill_df <- data.frame(year, population, sd, run, proportion, pop_run, run_sd, lwr, upr)
+
+
+# join dataframes for complete by year Scenario B data
+ScenB_data <- full_join(ScenB_data1, infill_df) %>%
+  arrange(year)
+
+```
+
+
+```{r Figure 7 - border passage by population over time, echo=FALSE, fig.dim=c(5,7)}
+# Plot ScenarioA population run proportions
+ggplot(ScenA_data, aes(x = as.factor(year), y = proportion*100)) + 
+  geom_bar(stat = "identity", colour = "black", fill="light grey") +
+  geom_errorbar(data=ScenA_data, aes(ymin=lwr*100, ymax=upr*100), width=.2) +
+  geom_vline(xintercept = 2008, lty = "dotted") +
+  xlab("Year") +
+  ylab("Population run size (%)") +
+  #scale_y_continuous(limits = c(0,100)) +
+  scale_x_discrete(breaks = c("1984","1988","1992","1996","2000","2004","2008","2012","2016")) +
+  theme_bw() +
+  facet_wrap(~stock, ncol=3, scales = "free_y") +
+  theme(strip.text = element_text(size=10)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  theme(axis.text = element_text(size=10)) +
+  theme(axis.title = element_text(size=10))
+ggsave(file.path(figure_path, paste("Figure_7.popn.passage_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+
+# Plot ScenarioB population run proportions
+ggplot(ScenB_data, aes(x = as.factor(year), y = proportion*100)) + 
+  geom_bar(stat = "identity", fill="light grey",colour = "black") +
+  geom_errorbar(data=ScenB_data, aes(x= as.factor(year), ymin= lwr*100, ymax=upr*100, width=.2)) +
+  #geom_vline(xintercept = "2008", lty = "dotted") +
+  xlab("Year") +
+  ylab("Population run size (%)") +
+  scale_x_discrete(breaks = c("1984","1988","1992","1996","2000","2004","2008","2012","2016")) +
+  theme_bw() +
+  facet_wrap(~population, ncol=3, scales = "free_y") +
+  theme(strip.text = element_text(size=10)) +
+  theme(axis.text.x = element_text(angle=45, hjust=1)) +
+  theme(axis.text = element_text(size=10)) +
+  theme(axis.title = element_text(size=10))
+ggsave(file.path(figure_path, paste("Figure_7.popn.passage_ScenB_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
+
+
+
+
+```{r Load Posterior files for Scenario A and Scenario B, echo=FALSE}
+
+# load the 3 different parts of the Scenario A posterior file
+Scen_A_post_1 <- read.csv("data/Posterior_Samples_A_part1.csv")
+Scen_A_post_2 <- read.csv("data/Posterior_Samples_A_part2.csv")
+Scen_A_post_3 <- read.csv("data/Posterior_Samples_A_part3.csv")
+
+# bind the the parts into single dataframe
+ScenarioA_posteriors <- cbind(Scen_A_post_1, Scen_A_post_2, Scen_A_post_3)
+
+
+
+# load the 3 different parts of the Scenario B posterior file
+Scen_B_post_1 <- read.csv("data/Posterior_Samples_B_part1.csv")
+Scen_B_post_2 <- read.csv("data/Posterior_Samples_B_part2.csv")
+Scen_B_post_3 <- read.csv("data/Posterior_Samples_B_part3.csv")
+
+# bind the the parts into single dataframe
+ScenarioB_posteriors <- cbind(Scen_B_post_1, Scen_B_post_2, Scen_B_post_3)
+
+
+```
+
+
+
+
+```{r manipulate ScenarioA posteriors, echo=FALSE}
+
+# alpha and beta posteriors
+alpha.beta_A <- ScenarioA_posteriors %>%
+  as.data.frame() %>%
+  select(1:16)
+  
+pop <- c("Lower Mainstem", "Stewart", "Pelly", "White-Donjek", "Middle Mainstem", "Carmacks", "Upper Lakes and Mainstem", "Teslin")
+
+# get percentiles
+alpha_summ <- rbind(quantile(ScenarioA_posteriors$alpha_1, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_2, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_3, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_4, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_5, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_6, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_7, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_8, c(0.05,0.5,0.95)))
+
+alpha_summary_A <- as.data.frame(cbind(pop, alpha_summ)) %>%
+  rename(alpha_low = "5%",
+         alpha_med = "50%",
+         alpha_upr = "95%")
+
+alpha_summary_A$alpha_low <- as.numeric(as.character(alpha_summary_A$alpha_low))
+alpha_summary_A$alpha_med <- as.numeric(as.character(alpha_summary_A$alpha_med))
+alpha_summary_A$alpha_upr <- as.numeric(as.character(alpha_summary_A$alpha_upr))
+
+# create equilibrium values, = log(alpha)/beta
+equil_product_A <- ScenarioA_posteriors[,1:16] %>%
+  gather(key = alpha_pop, value = alpha_value, alpha_1:alpha_8) %>%
+  gather(key = beta_pop, value = beta_value, beta_1:beta_8) %>%
+  mutate(equilibrium = log(alpha_value)/beta_value,
+         population = substr(beta_pop, 6,6))
+ 
+region_vec <- c("Lower Mainstem", "Stewart", "Pelly","White-Donjek","Middle Mainstem", "Carmacks",
+                          "Upper Lakes and Mainstem", "Teslin")
+
+equil_product_A_perc <- equil_product_A %>%
+  group_by(population) %>%
+  summarise(equil_lwr = quantile(equilibrium, probs = 0.05),
+            equil_med = quantile(equilibrium, probs = 0.5),
+            equil_upr = quantile(equilibrium, probs = 0.95)) %>%
+  ungroup() %>%
+  mutate(region = region_vec) %>%
+  as.data.frame()
+
+df <- cbind(equil_product_A_perc,alpha_summary_A) %>%
+  select(-population, -region)
+
+
+
+  
+
+
+
+ 
+beta_percentile <- equil_A %>%  
+  group_by(population) %>%
+  summarise(equil_percentile = list(enframe(quantile(beta_value, probs = c(0.05, 0.5, 0.95))))) %>%
+  unnest() %>%
+  spread(key = name, value = value) %>%
+  rename(beta_low = "5%",
+         beta_med = "50%",
+         beta_upr = "95%") %>%
+  as.data.frame()
+  
+  
+
+# get 1/beta percentiles
+equilib_A <- rbind(quantile(equil_A$beta_1, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_2, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_3, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_4, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_5, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_6, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_7, c(0.05,0.5,0.95)),
+quantile(equil_A$beta_8, c(0.05,0.5,0.95)))
+
+equilibrium_A <- as.data.frame(cbind(pop, equilib_A)) %>%
+  rename(equil_low = "5%",
+         equil_med = "50%",
+         equil_upr = "95%")
+
+
+
+
+
+
+
+
+
+
+productivity_A <- ScenarioA_posteriors %>%
+  select(1:8, 634:641) %>%
+  gather(key = alpha, value = alpha_value, alpha_1:alpha_8) %>%
+  gather(key = last_resid, value = resid_value, last_resid_1:last_resid_8) %>%
+  mutate(substock = substr(alpha, 7,7)) %>%
+  mutate(log_alpha = log(alpha_value)) %>%
+  mutate(log_resid = log(resid_value)) %>%
+  mutate(productivity_index = log_alpha + log_resid) %>%
+  mutate(population = rep(c("Lower Mainstem", "Stewart", "Pelly","White-Donjek","Middle Mainstem", "Carmacks",
+                          "Upper Lakes and Mainstem", "Teslin"),each=80000))
+
+
+Umsy_A <- ScenarioA_posteriors[,17:24] %>%
+  sample_n(1000, replace=TRUE) %>%
+  gather(key = Umsy, value = value, Umsy_1:Umsy_8) %>%
+  mutate(substock = rep(c("Lower Mainstem", "Stewart", "Pelly","White-Donjek","Middle Mainstem", "Carmacks",
+                          "Upper Lakes and Mainstem", "Teslin"),each=1000))
+
+
+Smsy_A <- ScenarioA_posteriors[,25:32]  %>%
+  sample_n(1000, replace=TRUE) %>%
+  gather(key = Smsy, value = value, Smsy_1:Smsy_8) %>%
+  mutate(substock = rep(c("Lower Mainstem", "Stewart", "Pelly","White-Donjek","Middle Mainstem", "Carmacks",
+                          "Upper Lakes and Mainstem", "Teslin"),each=1000))
+
+
+
+
+
+
+quantile(ScenarioA_posteriors$alpha_1, c(0.05,0.5,0.95))
+
+
+
+
+
+
+
+
+
+Umsy_B <- ScenarioB_posteriors[,17:24] %>%
+  sample_n(1000, replace=TRUE) %>%
+  gather(key = Umsy, value = value, Umsy_1:Umsy_8) %>%
+  mutate(substock = rep(c("Lower Mainstem", "Stewart", "Pelly","White-Donjek","Middle Mainstem", "Carmacks",
+                          "Upper Lakes and Mainstem", "Teslin"),each=1000))
+
+
+Smsy_B <- ScenarioB_posteriors[,25:32]  %>%
+  sample_n(1000, replace=TRUE) %>%
+  gather(key = Smsy, value = value, Smsy_1:Smsy_8) %>%
+  mutate(substock = rep(c("Lower Mainstem", "Stewart", "Pelly","White-Donjek","Middle Mainstem", "Carmacks",
+                          "Upper Lakes and Mainstem", "Teslin"),each=1000))
+
+```
+
+
+
+
+```{r alpha and beta posteriors ScenarioA, echo=FALSE}
+# alpha and beta posteriors
+alpha.beta_A <- ScenarioA_posteriors %>%
+  as.data.frame() %>%
+  select(1:16)
+  
+pop <- c("Lower Mainstem", "Stewart", "Pelly", "White-Donjek", "Middle Mainstem", "Carmacks", "Upper Lakes and Mainstem", "Teslin")
+
+# get percentiles
+alpha_summ <- rbind(quantile(ScenarioA_posteriors$alpha_1, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_2, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_3, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_4, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_5, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_6, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_7, c(0.05,0.5,0.95)),
+quantile(ScenarioA_posteriors$alpha_8, c(0.05,0.5,0.95)))
+
+alpha_summary_A <- as.data.frame(cbind(pop, alpha_summ)) %>%
+  rename(alpha_low = "5%",
+         alpha_med = "50%",
+         alpha_upr = "95%")
+
+alpha_summary_A$alpha_low <- as.numeric(as.character(alpha_summary_A$alpha_low))
+alpha_summary_A$alpha_med <- as.numeric(as.character(alpha_summary_A$alpha_med))
+alpha_summary_A$alpha_upr <- as.numeric(as.character(alpha_summary_A$alpha_upr))
+
+# create equilibrium values, = log(alpha)/beta
+equil_product_A <- ScenarioA_posteriors[,1:16] %>%
+  gather(key = alpha_pop, value = alpha_value, alpha_1:alpha_8) %>%
+  gather(key = beta_pop, value = beta_value, beta_1:beta_8) %>%
+  mutate(equilibrium = log(alpha_value)/beta_value,
+         population = substr(beta_pop, 6,6))
+ 
+
+equil_product_A_perc <- equil_product_A %>%
+  group_by(population) %>%
+  summarise(equil_lwr = quantile(equilibrium, probs = 0.05),
+            equil_med = quantile(equilibrium, probs = 0.5),
+            equil_upr = quantile(equilibrium, probs = 0.95)) %>%
+  ungroup() %>%
+  mutate(region = pop) %>%
+  as.data.frame()
+
+df <- cbind(equil_product_A_perc,alpha_summary_A) %>%
+  select(-population, -region)
 
 
 
 ```
+
+```{r alpha and beta posteriors ScenarioB, echo=FALSE}
+# alpha and beta posteriors
+alpha.beta_B <- ScenarioB_posteriors %>%
+  as.data.frame() %>%
+  select(1:16)
+  
+pop <- c("Lower Mainstem", "Stewart", "Pelly", "White-Donjek", "Middle Mainstem", "Carmacks", "Upper Lakes and Mainstem", "Teslin")
+
+# get percentiles
+alpha_summ <- rbind(quantile(ScenarioB_posteriors$alpha_1, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_2, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_3, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_4, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_5, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_6, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_7, c(0.05,0.5,0.95)),
+quantile(ScenarioB_posteriors$alpha_8, c(0.05,0.5,0.95)))
+
+alpha_summary_B <- as.data.frame(cbind(pop, alpha_summ)) %>%
+  rename(alpha_low = "5%",
+         alpha_med = "50%",
+         alpha_upr = "95%")
+
+alpha_summary_B$alpha_low <- as.numeric(as.character(alpha_summary_B$alpha_low))
+alpha_summary_B$alpha_med <- as.numeric(as.character(alpha_summary_B$alpha_med))
+alpha_summary_B$alpha_upr <- as.numeric(as.character(alpha_summary_B$alpha_upr))
+
+# create equilibrium values, = log(alpha)/beta
+equil_product_B <- ScenarioB_posteriors[,1:16] %>%
+  gather(key = alpha_pop, value = alpha_value, alpha_1:alpha_8) %>%
+  gather(key = beta_pop, value = beta_value, beta_1:beta_8) %>%
+  mutate(equilibrium = log(alpha_value)/beta_value,
+         population = substr(beta_pop, 6,6))
+ 
+
+equil_product_B_perc <- equil_product_B %>%
+  group_by(population) %>%
+  summarise(equil_lwr = quantile(equilibrium, probs = 0.05),
+            equil_med = quantile(equilibrium, probs = 0.5),
+            equil_upr = quantile(equilibrium, probs = 0.95)) %>%
+  ungroup() %>%
+  mutate(region = pop) %>%
+  as.data.frame()
+
+dfB <- cbind(equil_product_B_perc,alpha_summary_B) %>%
+  select(-population, -region)
+
+
+
+```
+
+
+```{r Figure 8 Scenario A productivity vs. equilibrium size, echo=FALSE, fig.dim=c(6,6)}
+
+# dataframe used is df
+
+ggplot(df, aes(x = equil_med/1000, y = alpha_med, fill=pop)) +
+  geom_errorbar(data=df, mapping=aes(x=equil_med/1000, ymin=alpha_low, ymax=alpha_upr), color = "gray50") +
+  geom_errorbarh(data=df, mapping=aes(x=alpha_med, xmin=equil_lwr/1000, xmax=equil_upr/1000), color = "gray50") +
+  geom_point(size=4, pch=21, colour="black") +
+  xlab("Equilibrium size (000s)") +
+  ylab("Intrinsic productivity") +
+  scale_fill_viridis(option = "viridis", discrete = TRUE) +
+  coord_cartesian(xlim = c(0, 50), ylim = c(0,40)) +
+  scale_y_continuous(breaks = c(0,10,20,30,40)) +
+  theme_classic() +
+  theme(axis.title = element_text(size=12)) +
+  theme(axis.text = element_text(size=12)) +
+  theme(legend.title=element_blank())
+ggsave(file.path(figure_path, paste("Figure_8.ScenA.product.equilibrium_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
+
+
+
+
+
+```{r recruits and spawners dataframe ScenarioA, echo=FALSE}
+
+pop <- c("Lower Mainstem", "Stewart", "Pelly", "White-Donjek", "Middle Mainstem", "Carmacks", "Upper Lakes and Mainstem", "Teslin")
+
+# ScenarioA_posteriors
+
+
+Recruits_ScenA <- ScenarioA_posteriors[,354:633]
+Spawners_ScenA <- ScenarioA_posteriors[,98:353]
+
+
+R_50 <- stack(lapply(Recruits_ScenA, quantile, prob = 0.5, names = FALSE)) %>%
+  mutate(year = rep(c(1:35),times=8),
+         population = rep(pop, each = 35),
+         param = "recruits",
+         percentile = "median")
+R_20 <- stack(lapply(Recruits_ScenA, quantile, prob = 0.2, names = FALSE)) %>%
+  mutate(year = rep(c(1:35),times=8),
+         population = rep(pop, each = 35),
+         param = "recruits",
+         percentile = "lower")
+R_80 <- stack(lapply(Recruits_ScenA, quantile, prob = 0.8, names = FALSE)) %>%
+  mutate(year = rep(c(1:35),times=8),
+         population = rep(pop, each = 35),
+         param = "recruits",
+         percentile = "upper")
+
+Recruits_ScenA_df <- rbind(R_50, R_20, R_80) %>%
+  mutate(adj_year = as.numeric(as.character(year)) - 7) %>%
+  filter(adj_year > 0) %>%
+  select(4,3,7,6,5,1) %>%
+  spread(key = percentile, value = values) %>%
+  rename(Rec_low = lower,
+         Rec_med = median,
+         Rec_upp = upper) %>%
+  select(-param)
+
+
+S_50 <- stack(lapply(Spawners_ScenA, quantile, prob = 0.5, names = FALSE)) %>%
+  mutate(year = rep(c(1:32),times=8),
+         population = rep(pop, each = 32),
+         param = "spawners",
+         percentile = "median")
+S_20 <- stack(lapply(Spawners_ScenA, quantile, prob = 0.2, names = FALSE)) %>%
+  mutate(year = rep(c(1:32),times=8),
+         population = rep(pop, each = 32),
+         param = "spawners",
+         percentile = "lower")
+S_80 <- stack(lapply(Spawners_ScenA, quantile, prob = 0.8, names = FALSE)) %>%
+  mutate(year = rep(c(1:32),times=8),
+         population = rep(pop, each = 32),
+         param = "spawners",
+         percentile = "upper")
+
+Spawners_ScenA_df <- rbind(S_50, S_20, S_80) %>%
+  mutate(adj_year = as.numeric(as.character(year))) %>%
+  select(4,3,7,6,5,1) %>%
+  spread(key = percentile, value = values) %>%
+  rename(Spw_low = lower,
+         Spw_med = median,
+         Spw_upp = upper) %>%
+  select(-param)
+Spawners_ScenA_df <- Spawners_ScenA_df[1:224,]
+
+Rec_and_Spwn_ScenA <- cbind(Recruits_ScenA_df, Spawners_ScenA_df)
+Rec_and_Spwn_ScenA <- Rec_and_Spwn_ScenA[,c(1:6,10:12)]
+
+tail(Rec_and_Spwn_ScenA)
+
+
+```
+
+```{r recruits and spawners dataframe ScenarioB, echo=FALSE}
+
+pop <- c("Lower Mainstem", "Stewart", "Pelly", "White-Donjek", "Middle Mainstem", "Carmacks", "Upper Lakes and Mainstem", "Teslin")
+
+# ScenarioB_posteriors
+
+
+Recruits_ScenB <- ScenarioB_posteriors[,354:633]
+Spawners_ScenB <- ScenarioB_posteriors[,98:353]
+
+
+R_50 <- stack(lapply(Recruits_ScenB, quantile, prob = 0.5, names = FALSE)) %>%
+  mutate(year = rep(c(1:35),times=8),
+         population = rep(pop, each = 35),
+         param = "recruits",
+         percentile = "median")
+R_20 <- stack(lapply(Recruits_ScenB, quantile, prob = 0.2, names = FALSE)) %>%
+  mutate(year = rep(c(1:35),times=8),
+         population = rep(pop, each = 35),
+         param = "recruits",
+         percentile = "lower")
+R_80 <- stack(lapply(Recruits_ScenB, quantile, prob = 0.8, names = FALSE)) %>%
+  mutate(year = rep(c(1:35),times=8),
+         population = rep(pop, each = 35),
+         param = "recruits",
+         percentile = "upper")
+
+Recruits_ScenB_df <- rbind(R_50, R_20, R_80) %>%
+  mutate(adj_year = as.numeric(as.character(year)) - 7) %>%
+  filter(adj_year > 0) %>%
+  select(4,3,7,6,5,1) %>%
+  spread(key = percentile, value = values) %>%
+  rename(Rec_low = lower,
+         Rec_med = median,
+         Rec_upp = upper) %>%
+  select(-param)
+
+
+S_50 <- stack(lapply(Spawners_ScenB, quantile, prob = 0.5, names = FALSE)) %>%
+  mutate(year = rep(c(1:32),times=8),
+         population = rep(pop, each = 32),
+         param = "spawners",
+         percentile = "median")
+S_20 <- stack(lapply(Spawners_ScenB, quantile, prob = 0.2, names = FALSE)) %>%
+  mutate(year = rep(c(1:32),times=8),
+         population = rep(pop, each = 32),
+         param = "spawners",
+         percentile = "lower")
+S_80 <- stack(lapply(Spawners_ScenB, quantile, prob = 0.8, names = FALSE)) %>%
+  mutate(year = rep(c(1:32),times=8),
+         population = rep(pop, each = 32),
+         param = "spawners",
+         percentile = "upper")
+
+Spawners_ScenB_df <- rbind(S_50, S_20, S_80) %>%
+  mutate(adj_year = as.numeric(as.character(year))) %>%
+  select(4,3,7,6,5,1) %>%
+  spread(key = percentile, value = values) %>%
+  rename(Spw_low = lower,
+         Spw_med = median,
+         Spw_upp = upper) %>%
+  select(-param)
+Spawners_ScenB_df <- Spawners_ScenB_df[1:224,]
+
+Rec_and_Spwn_ScenB <- cbind(Recruits_ScenB_df, Spawners_ScenB_df)
+Rec_and_Spwn_ScenB <- Rec_and_Spwn_ScenB[,c(1:6,10:12)]
+
+
+
+```
+
+
+
+```{r Spawner recruit relationships ScenarioA, echo=FALSE}
+
+# create vector of abundances for each dataframe
+sp_YC <- as.vector(seq(0,20,length.out=100))
+sp_YlC <- as.vector(seq(0,20,length.out=100))
+sp_Ym <- as.vector(seq(0,40,length.out=100))
+sp_YP <- as.vector(seq(0,18,length.out=100))
+sp_YS <- as.vector(seq(0,25,length.out=100))
+sp_YT <- as.vector(seq(0,25,length.out=100))
+sp_Yu <- as.vector(seq(0,30,length.out=100))
+sp_YWD <- as.vector(seq(0,9,length.out=100))
+
+# repeat substock abundance vector 100 times for each value of alpha and beta
+spw_YC <- rep(c(sp_YC),(100))
+spw_YlC <- rep(c(sp_YlC),(100))
+spw_Ym <- rep(c(sp_Ym),(100))
+spw_YP <- rep(c(sp_YP),(100))
+spw_YS <- rep(c(sp_YS),(100))
+spw_YT <- rep(c(sp_YT),(100)) 
+spw_Yu <- rep(c(sp_Yu),(100))
+spw_YWD <- rep(c(sp_YWD),(100))
+
+# combine abundances into single vector
+spw_df <- c(spw_YlC, spw_YS, spw_YP, spw_YWD, spw_Ym, spw_YC, spw_Yu, spw_YT)
+
+
+# add column of abundances to alphabeta_df2 dataframe
+alpha_A_sample <- alpha.beta_A %>%
+  select(1:8) %>%
+  sample_n(100, replace=TRUE)
+
+alpha_A_sample2 <- alpha_A_sample[rep(seq_len(nrow(alpha_A_sample)),each=100),] %>%
+  mutate(sim = rep(c(1:100), times=100)) %>%
+  gather(key = alpha, value = alpha_value, alpha_1:alpha_8) %>%
+  mutate(population = rep(pop2,each=100))
+
+beta_A_sample <- alpha.beta_A %>%
+  select(9:16) %>%
+  sample_n(100, replace=TRUE)
+
+beta_A_sample2 <- beta_A_sample[rep(seq_len(nrow(beta_A_sample)),each=100),] %>%
+  mutate(sim = rep(c(1:100), times=100)) %>%
+  gather(key = beta, value = beta_value, beta_1:beta_8) %>%
+  mutate(population = rep(pop2,each=100))
+
+
+alpha_beta_ScenA_sample <- cbind(alpha_A_sample2, beta_A_sample2)
+alpha_beta_ScenA_sample <- alpha_beta_ScenA_sample[,c(4,1,3,7)]
+
+
+alpha_beta_ScenA_sample$abund <- NA
+alpha_beta_ScenA_sample$abund <- spw_df
+
+
+abScenA_samp <- alpha_beta_ScenA_sample
+
+
+# add on 'y' value that has the predicted ricker estimates per abundance value
+abScenA_samp$y <- NA
+abScenA_samp$y <- abScenA_samp$alpha_value*abScenA_samp$abund*exp(-abScenA_samp$beta_value*abScenA_samp$abund)
+
+
+# 20 and 80 percentiles
+alpha_beta_percentile <- abScenA_samp %>% 
+  group_by(population, abund) %>%
+    dplyr::summarise(q_20 = quantile(y, probs=0.20),
+                     q_80 = quantile(y, probs=0.8)) 
+```
+
+
+
+```{r Spawner recruit relationships ScenarioB, echo=FALSE}
+
+# create vector of abundances for each dataframe
+sp_YC <- as.vector(seq(0,20,length.out=100))
+sp_YlC <- as.vector(seq(0,20,length.out=100))
+sp_Ym <- as.vector(seq(0,40,length.out=100))
+sp_YP <- as.vector(seq(0,18,length.out=100))
+sp_YS <- as.vector(seq(0,25,length.out=100))
+sp_YT <- as.vector(seq(0,25,length.out=100))
+sp_Yu <- as.vector(seq(0,30,length.out=100))
+sp_YWD <- as.vector(seq(0,9,length.out=100))
+
+# repeat substock abundance vector 100 times for each value of alpha and beta
+spw_YC <- rep(c(sp_YC),(100))
+spw_YlC <- rep(c(sp_YlC),(100))
+spw_Ym <- rep(c(sp_Ym),(100))
+spw_YP <- rep(c(sp_YP),(100))
+spw_YS <- rep(c(sp_YS),(100))
+spw_YT <- rep(c(sp_YT),(100)) 
+spw_Yu <- rep(c(sp_Yu),(100))
+spw_YWD <- rep(c(sp_YWD),(100))
+
+# combine abundances into single vector
+spw_df <- c(spw_YlC, spw_YS, spw_YP, spw_YWD, spw_Ym, spw_YC, spw_Yu, spw_YT)
+
+
+# add column of abundances to alphabeta_df2 dataframe
+alpha_B_sample <- alpha.beta_B %>%
+  select(1:8) %>%
+  sample_n(100, replace=TRUE)
+
+alpha_B_sample2 <- alpha_B_sample[rep(seq_len(nrow(alpha_B_sample)),each=100),] %>%
+  mutate(sim = rep(c(1:100), times=100)) %>%
+  gather(key = alpha, value = alpha_value, alpha_1:alpha_8) %>%
+  mutate(population = rep(pop2,each=100))
+
+beta_B_sample <- alpha.beta_B %>%
+  select(9:16) %>%
+  sample_n(100, replace=TRUE)
+
+beta_B_sample2 <- beta_B_sample[rep(seq_len(nrow(beta_B_sample)),each=100),] %>%
+  mutate(sim = rep(c(1:100), times=100)) %>%
+  gather(key = beta, value = beta_value, beta_1:beta_8) %>%
+  mutate(population = rep(pop2,each=100))
+
+
+alpha_beta_ScenB_sample <- cbind(alpha_B_sample2, beta_B_sample2)
+alpha_beta_ScenB_sample <- alpha_beta_ScenB_sample[,c(4,1,3,7)]
+
+
+alpha_beta_ScenB_sample$abund <- NA
+alpha_beta_ScenB_sample$abund <- spw_df
+
+
+abScenB_samp <- alpha_beta_ScenB_sample
+
+
+# add on 'y' value that has the predicted ricker estimates per abundance value
+abScenB_samp$y <- NA
+abScenB_samp$y <- abScenB_samp$alpha_value*abScenB_samp$abund*exp(-abScenB_samp$beta_value*abScenB_samp$abund)
+
+
+# 20 and 80 percentiles
+alpha_beta_percentileB <- abScenB_samp %>% 
+  group_by(population, abund) %>%
+    dplyr::summarise(q_20 = quantile(y, probs=0.20),
+                     q_80 = quantile(y, probs=0.8)) 
+```
+
+
+```{r Figure 9 Plot Ricker curves ScenarioA, echo=FALSE, fig.dim=c(6,6)}
+
+ggplot() +
+  geom_ribbon(data = alpha_beta_percentile, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
+  #geom_point(data = RS_df3, aes(x= median_S, y = median_R)) +
+  geom_pointrange(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, 
+                                                 ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.9, size=0.3) + 
+  geom_errorbarh(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000,
+                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.9, size = 0.3) + 
+  xlab("Spawners (000s)") +
+  ylab("Recruits (000s)") +
+  facet_wrap(~population, ncol=3, scales = "free") +
+  theme_bw() +
+  theme(axis.title = element_text(size=12)) +
+  theme(axis.text = element_text(size=10))
+#ggsave(file.path(figure_path, paste("Figure_9.ricker_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
+
+```{r Figure 9 Plot Ricker curves ScenarioB, echo=FALSE, fig.dim=c(6,6)}
+
+ggplot() +
+  geom_ribbon(data = alpha_beta_percentileB, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
+  #geom_point(data = RS_df3, aes(x= median_S, y = median_R)) +
+  geom_pointrange(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000, 
+                                                 ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.9, size=0.3) + 
+  geom_errorbarh(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000,
+                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.9, size = 0.3) + 
+  xlab("Spawners (000s)") +
+  ylab("Recruits (000s)") +
+  facet_wrap(~population, ncol=3, scales = "free") +
+  theme_bw() +
+  theme(axis.title = element_text(size=12)) +
+  theme(axis.text = element_text(size=10))
+#ggsave(file.path(figure_path, paste("Figure_9.ricker_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
+
+
+```{r Figure 10. Productivity index - Scenario A, fig.dim=c(6,6)}
+
+
+
+productivity_A
+
+ggplot(df, aes(x=year, y = median, colour = reg2), show.legend = F) +
+  geom_point(size=1,show.legend = F) +
+  # scale_color_manual(values = MyColour) +
+  geom_line(show.legend = F) +
+  geom_ribbon(aes(ymin=lower, ymax=upper), show.legend = F, alpha=0.2) + #aes(,fill=reg2)
+  # scale_fill_manual(values = MyColour) +
+  scale_fill_viridis(option="viridis", discrete = TRUE) +
+  geom_hline(yintercept = 0, lty = "dotted") +     #geom_hline(data=df_full,aes(yintercept = alpha_adj), lty="dotted") +
+  xlab("Brood year") +
+  ylab("Productivity index") +
+  scale_x_continuous(breaks=c(1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010)) +
+  scale_y_continuous(limits=c(-5,5), breaks=c(-3,-1,1,3)) +
+  facet_wrap(~reg2,nrow=4) +  # ,scales = "free_y"
+  theme(legend.position = "none") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=45, hjust = 1, size=10))
+#ggsave(file.path(figure_path, paste("index.log.residuals_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
+
+
+
+
+
+```{r Figure 11. Usmy posteriors, echo=FALSE, fig.dim=c(6,6)}
+
+# Scenario A
+Umsy_A$substock <- factor(Umsy_A$substock, levels = c("Lower Mainstem", "Stewart", "Pelly",
+                                                      "White-Donjek","Middle Mainstem", "Carmacks",
+                                                      "Upper Lakes and Mainstem", "Teslin"))
+
+ggplot(Umsy_A, aes(x=substock, y=value, fill=substock)) +
+  geom_boxplot(outlier.shape = NA, size=1.25) +
+  #coord_flip() +
+  xlab("Population") +
+  ylab("U.msy posteriors") +
+  scale_y_continuous(limits=c(0,1)) +
+  #scale_fill_manual(values = MyColour) +
+  scale_fill_viridis(option = "viridis", discrete = TRUE) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=45, hjust=1, size=10))+
+  theme(axis.text.y = element_text(size=10)) +
+  theme(axis.title = element_text(size=12)) +
+  theme(legend.position="none")
+ggsave(file.path(figure_path, paste("Figure_11.Umsy_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+
+
+
+# Scenario B
+Umsy_B$substock <- factor(Umsy_B$substock, levels = c("Lower Mainstem", "Stewart", "Pelly",
+                                                      "White-Donjek","Middle Mainstem", "Carmacks",
+                                                      "Upper Lakes and Mainstem", "Teslin"))
+
+ggplot(Umsy_B, aes(x=substock, y=value, fill=substock)) +
+  geom_boxplot(outlier.shape = NA, size=1.25) +
+  #coord_flip() +
+  xlab("Population") +
+  ylab("U.msy posteriors") +
+  scale_y_continuous(limits=c(0,1)) +
+  #scale_fill_manual(values = MyColour) +
+  scale_fill_viridis(option = "viridis", discrete = TRUE) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=45, hjust=1, size=10))+
+  theme(axis.text.y = element_text(size=10)) +
+  theme(axis.title = element_text(size=12)) +
+  theme(legend.position="none")
+ggsave(file.path(figure_path, paste("Figure_11.Umsy_ScenB_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -1,0 +1,3 @@
+load("/Users/m.#siegle/Dropbox (ESSA Technologies)/EN2438 - Yukon Chinook/Yukon-harvest-diverity/outputs/Yukon_data_for_BS_July24_2019.RDS")
+load("/Users/m.#siegle/Dropbox (ESSA Technologies)/EN2438 - Yukon Chinook/Yukon-harvest-diverity/outputs/Yukon_data_for_BS_ScenA.RR_July312019.RDS")
+load("/Users/m.#siegle/Dropbox (ESSA Technologies)/EN2438 - Yukon Chinook/Yukon-harvest-diverity/outputs/Yukon_data_for_BS_ScenB.RR_July312019.RDS")
