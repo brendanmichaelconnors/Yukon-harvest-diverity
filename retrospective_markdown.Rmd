@@ -723,8 +723,12 @@ Spawners_ScenA_df <- Spawners_ScenA_df[1:224,]
 
 Rec_and_Spwn_ScenA <- cbind(Recruits_ScenA_df, Spawners_ScenA_df)
 Rec_and_Spwn_ScenA <- Rec_and_Spwn_ScenA[,c(1:6,10:12)]
+  
+Rec_and_Spwn_ScenA$BroodYear <- NA
+Rec_and_Spwn_ScenA$BroodYear <- rep(c(1982:2009),times=8)
+  
 
-# tail(Rec_and_Spwn_ScenA)
+# head(Rec_and_Spwn_ScenA)
 
 
 ```
@@ -954,7 +958,7 @@ alpha_beta_percentileB <- abScenB_samp %>%
 
 ggplot() +
   geom_ribbon(data = alpha_beta_percentile, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
-  geom_point(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, color=as.factor(year), width=0.9), size=2) +
+  geom_point(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, color=BroodYear, width=0.9), size=2) +
   geom_errorbar(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, 
                                                  ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.0, size=0.3) +
   geom_errorbarh(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000,
@@ -1010,21 +1014,23 @@ alpha_resid_df_A$population <- factor(alpha_resid_df_A$population, levels = c("L
                                                                               "White-Donjek","Middle Mainstem",
                                                                               "Carmacks","Upper Lakes and Mainstem","Teslin"))
 
-ggplot(alpha_resid_df_A, aes(x=year, y = alpha_med + resid_med, fill=population), show.legend = F) +
-  geom_point(size=1,show.legend = F, aes(colour = factor(population))) +
-  geom_line(show.legend = F, aes(colour = factor(population))) +
-  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr, colour=factor(population)), show.legend = F, alpha=0.2) +
+MyColor <- c("#440154FF", "#482677FF","#39568CFF","#287D8EFF", "#20A387FF", "#29AF7FFF", "#B8DE29FF", "#FDE725FF")
+
+ggplot(alpha_resid_df_A, aes(x=year, y = alpha_med + resid_med), show.legend = F) + #, fill=population
+  geom_point(size=1,show.legend = F) + #, aes(colour = factor(population))
+  geom_line(show.legend = F) + #, aes(colour = factor(population))
+  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr), show.legend = F, alpha=0.4) + # , colour=factor(population)
   scale_fill_viridis(option="viridis", discrete = TRUE) +
   geom_hline(yintercept = 0, lty = "dotted") +
   xlab("Brood year") +
   ylab("Productivity index") +
   scale_x_continuous(breaks=c(1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010, 2014)) +
-  scale_y_continuous(limits=c(-6,6), breaks=c(-6,-4,-2,0,2,4,6)) +
+  scale_y_continuous(limits=c(-6,6), breaks=c(-6,-3,0,3,6)) +
   facet_wrap(~population, nrow=4) +  # ,scales = "free_y"
   theme(legend.position = "none") +
   theme_bw() +
   theme(axis.text.x = element_text(angle=45, hjust = 1, size=10))
-# ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
 
 ```
 
