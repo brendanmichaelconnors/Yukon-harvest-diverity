@@ -275,14 +275,14 @@ PE_running <- function(data,first_year,last_year){
   rs_data <- data	
   rs <- subset(rs_data,year>= first_year & year<last_year)
   
-  pop_CV <- ddply(rs,c("stock"),function(x){
+  pop_CV <- plyr::ddply(rs,c("stock"),function(x){
     CV <-sd(x$MLE,na.rm=T)/mean(x$MLE,na.rm=T)
     abund<-sum(x$MLE,na.rm=T)
     data.frame(CV,abund)
   })
   
   
-  total.esc <- ddply(rs,c("year"),function(x){
+  total.esc <- plyr::ddply(rs,c("year"),function(x){
     total.esc<-sum(x$MLE,na.rm=T)
     data.frame(total.esc)
   })

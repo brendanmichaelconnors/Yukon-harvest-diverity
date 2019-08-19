@@ -273,7 +273,45 @@ ggplot(bc3, aes(x=revised_julian, y = prop)) +
 
 
 
+```{r   }
 
+
+
+gsi4 <- gsi3 %>% filter(julian_date < 1000) %>%
+  mutate(gsiprop = prop*100) %>%
+  select(year, julian_date, gsiprop)
+
+
+bc4 <- bc3 %>%
+  mutate(bcprop = prop*100) %>%
+  rename(julian_date = revised_julian) %>%
+  select(year, julian_date, bcprop)
+
+gsi4$year <- as.factor(gsi4$year)
+bc4$year <- as.factor(bc4$year)
+
+
+df <- full_join(bc4, gsi4) %>%
+  mutate(diff = abs(round(bcprop - gsiprop,2))) %>%
+  na.omit() %>%
+  group_by(year) %>%
+  summarise(mean = mean(diff),
+            min = min(diff),
+            max = max(diff)) %>%
+  as.data.frame() 
+
+View(df)
+ggplot(df %>% filter(year > "1983"), aes(x=julian_date, y=diff)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~year)
+
+round(quantile(df$mean,c(0.25,0.5,0.75)),2)
+
+df
+
+mean(df$mean)
+
+```
 
 
 
@@ -361,6 +399,8 @@ ScenB_data <- full_join(ScenB_data1, infill_df) %>%
   arrange(year)
 
 ```
+
+
 
 
 ```{r Figure 7 - border passage by population over time, echo=FALSE, fig.dim=c(5,7)}
@@ -928,12 +968,19 @@ abScenA_samp$y <- NA
 abScenA_samp$y <- abScenA_samp$alpha_value*abScenA_samp$abund*exp(-abScenA_samp$beta_value*abScenA_samp$abund)
 
 
+
+
 # 20 and 80 percentiles
 alpha_beta_percentileA <- abScenA_samp %>% 
   group_by(population, abund) %>%
     dplyr::summarise(q_20 = quantile(y, probs=0.20),
                      q_80 = quantile(y, probs=0.8)) 
+
+
+head(abScenA_samp)
+
 ```
+
 
 
 
@@ -1015,16 +1062,16 @@ ggplot() +
   geom_ribbon(data = alpha_beta_percentileA, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
   geom_point(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, color=as.factor(BroodYear), width=0.9), size=2) +
   geom_errorbar(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, 
-                                                 ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.0, size=0.3) +
+                                                 ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.2, size=0.3) +
   geom_errorbarh(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000,
-                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.0, size = 0.3) + 
+                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.2, size = 0.3) + 
   xlab("Spawners (000s)") +
   ylab("Recruits (000s)") +
   facet_wrap(~population, ncol=3, scales = "free") +
   theme_bw() +
   theme(axis.title = element_text(size=12)) +
   theme(axis.text = element_text(size=10))
- # ggsave(file.path(figure_path, paste("Figure_9.ricker_",system_time,".pdf", sep="")),height = 5, width = 7)
+# ggsave(file.path(figure_path, paste("Figure_9.Ricker_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
  
 ```
 
@@ -1038,16 +1085,16 @@ ggplot() +
   geom_ribbon(data = alpha_beta_percentileB, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
   geom_point(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000, color=as.factor(BroodYear), width=0.9), size=2) +
   geom_errorbar(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000, 
-                                                 ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.0, size=0.3) +
+                                                 ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.2, size=0.3) +
   geom_errorbarh(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000,
-                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.0, size = 0.3) + 
+                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.2, size = 0.3) + 
   xlab("Spawners (000s)") +
   ylab("Recruits (000s)") +
   facet_wrap(~population, ncol=3, scales = "free") +
   theme_bw() +
   theme(axis.title = element_text(size=12)) +
   theme(axis.text = element_text(size=10))
- #ggsave(file.path(figure_path, paste("Figure_9.ricker_",system_time,".pdf", sep="")),height = 5, width = 7)
+# ggsave(file.path(figure_path, paste("Figure_9.Ricker_ScenB",system_time,".pdf", sep="")),height = 5, width = 7)
 
 ```
 
@@ -1085,6 +1132,34 @@ ggplot(alpha_resid_df_A, aes(x=year, y = alpha_med + resid_med), show.legend = F
 ```
 
 
+
+```{r Figure 10. Productivity index over time - Scenario B, fig.dim=c(8,8)}
+
+# head(alpha_resid_df_B)
+
+alpha_resid_df_B$population <- factor(alpha_resid_df_B$population, levels = c("Lower Mainstem","Stewart","Pelly",
+                                                                              "White-Donjek","Middle Mainstem",
+                                                                              "Carmacks","Upper Lakes and Mainstem","Teslin"))
+
+# MyColor <- c("#440154FF", "#482677FF","#39568CFF","#287D8EFF", "#20A387FF", "#29AF7FFF", "#B8DE29FF", "#FDE725FF")
+
+ggplot(alpha_resid_df_B, aes(x=year, y = alpha_med + resid_med), show.legend = F) + #, fill=population
+  geom_point(size=1,show.legend = F) + #, aes(colour = factor(population))
+  geom_line(show.legend = F) + #, aes(colour = factor(population))
+  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr), show.legend = F, alpha=0.4) + # , colour=factor(population)
+  scale_fill_viridis(option = "viridis", discrete = TRUE) +
+  geom_hline(yintercept = 0, lty = "dotted") +
+  xlab("Brood year") +
+  ylab("Productivity index") +
+  scale_x_continuous(breaks=c(1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010, 2014)) +
+  scale_y_continuous(limits=c(-8,8), breaks=c(-8,-4,0,4,8)) +
+  facet_wrap(~population, nrow=4) +  # ,scales = "free_y"
+  theme(legend.position = "none") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=45, hjust = 1, size=10))
+#ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenB_",system_time,".pdf", sep="")),height = 5, width = 7)
+
+```
 
 
 
@@ -1330,14 +1405,14 @@ t3.3 <- t3.2 %>%
 # head(t3.3)
 
 # panel a: overfished
-ggplot(t3.3, aes(x=U*100, y=med_V2)) +
+ggplot(t3.3, aes(x=U*100, y=med_V2/300)) +
   ggtitle("Overfished") +
   geom_line(linetype = "solid", size=1.25, color="blue") +
-  geom_ribbon(aes(ymin=low_V2, ymax=upp_V2), alpha=0.2, color="blue", lty="dashed", fill = "blue") +
+  geom_ribbon(aes(ymin=low_V2/300, ymax=upp_V2/300), alpha=0.2, color="blue", lty="dashed", fill = "blue") +
   geom_line(aes(x=U*100,y=over.med*100), color="red", size=1.25) +
   geom_ribbon(aes(ymin=over.low*100, ymax=over.up*100), alpha=0.2, color="red", lty="dashed", fill= "red") +
   scale_y_continuous(limits = c(0,100), breaks=c(0,20,40,60,80,100)) +
-  scale_y_continuous(sec.axis = sec_axis(~./300, name = "Stocks overfished or exirpated (%)")) +
+  scale_y_continuous(sec.axis = sec_axis(~./1, name = "Stocks overfished (%)")) +
   scale_x_continuous(limits = c(0,100), breaks=c(0,20,40,60,80,100)) +
   ylab("Harvest (000s)") +
   xlab("Harvest rate (%)") +
@@ -1350,17 +1425,23 @@ ggplot(t3.3, aes(x=U*100, y=med_V2)) +
   theme(axis.title.x = element_text(size=12)) +
   theme(plot.title = element_text(hjust = 0.5, size=12)) +
   annotate("text", x=5, y=95,label="A", size=8)
-ggsave(file.path(figure_path, paste("Figure_13.tradeoff.overfish_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_13.tradeoff.overfish_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+```
 
+
+
+```{r Extirpation ScenA Figure 13 tradeoffs, echo=FALSE}
 
 # panel b: extirpated
-ggplot(t3.3, aes(x=U*100, y=med_V2)) +
+
+ggplot(t3.3, aes(x=U*100, y=med_V2/300)) +
   ggtitle("Extirpated") +
   geom_line(linetype = "solid", size=1.25, color="blue") +
-  geom_ribbon(aes(ymin=low_V2, ymax=upp_V2), alpha=0.2, color="blue", lty="dashed", fill = "blue") +
+  geom_ribbon(aes(ymin=low_V2/300, ymax=upp_V2/300), alpha=0.2, color="blue", lty="dashed", fill = "blue") +
   geom_line(aes(x=U*100,y=ext.med*100), color="red", size=1.25) +
   geom_ribbon(aes(ymin=ext.low*100, ymax=ext.up*100), alpha=0.2, color="red", lty="dashed", fill= "red") +
-  scale_y_continuous(limits = c(0,100), breaks=c(0,20,40,60,80,100)) +
+  scale_y_continuous(limits = c(0,120), breaks=c(0,20,40,60,80,100,120)) +
+  scale_y_continuous(sec.axis = sec_axis(~./1, name = "Stocks exirpated (%)")) +
   scale_x_continuous(limits = c(0,100), breaks=c(0,20,40,60,80,100)) +
   ylab("Harvest (000s)") +
   xlab("Harvest rate (%)") +
@@ -1373,7 +1454,7 @@ ggplot(t3.3, aes(x=U*100, y=med_V2)) +
   theme(axis.title.x = element_text(size=12)) +
   theme(plot.title = element_text(hjust = 0.5, size=12)) +
   annotate("text", x=5, y=95,label="B", size=8)
-ggsave(file.path(figure_path, paste("Figure_13.tradeoff.extirpate_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_13.tradeoff.extirpate_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
 
 ```
 
