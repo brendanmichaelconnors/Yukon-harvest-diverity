@@ -164,3 +164,12 @@ saveRDS(Yukon_chinook_data_for_BS_ScenB.RR,"./outputs/Yukon_data_for_BS_ScenB.RR
 ScenB_spwn <- Yukon_chinook_data_for_BS_ScenB.RR$S_obs
 
 saveRDS(ScenB_spwn,"./outputs/ScenarioB_RR_spawners.RDS")
+
+  
+  
+
+
+
+
+
+
