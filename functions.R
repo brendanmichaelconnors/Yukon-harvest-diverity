@@ -236,10 +236,10 @@ process.iteration = function(samp) {
   last_resid = unname(samp[substr(nms, 1, 10) == "last_resid"])
   phi = mean(unname(samp[substr(nms, 1, 3) == "phi"])) # for now take average across stocks
   
-  Sigma_R = matrix(samp[substr(nms, 1, 7) == "Sigma_R"], ns, ns)# this is a temporary hack
-  diagonal <- diag(Sigma_R)
-  Sigma_R <- matrix(0.5, nrow(Sigma_R), ncol(Sigma_R))  
-  diag(Sigma_R) <- diagonal
+  Sigma_R = matrix(samp[substr(nms, 1, 7) == "Sigma_R"], ns, ns)
+#  diagonal <- diag(Sigma_R)
+#  Sigma_R <- matrix(0.5, nrow(Sigma_R), ncol(Sigma_R))  
+#  diag(Sigma_R) <- diagonal
  
   pis = c(as.numeric(samp["pi_1"]), as.numeric(samp["pi_2"]), as.numeric(samp["pi_3"]), as.numeric(samp["pi_4"]))
   
