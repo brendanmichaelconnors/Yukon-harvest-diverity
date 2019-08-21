@@ -11,7 +11,7 @@
 # CDN-origin Yukon Chinook harvest control rule function
 #------------------------------------------------------------------------------#
 # run <- run size (i.e., pre-harvest recruitment) 
-# BPG < - border passage goal
+# BPG < - border (escapement) passage goal
 # for_error <- forecast error
 # US_sub <- US subsistence target
 # CDN_sub <- CDN First Nations harvest target (basic needs allocation) 
