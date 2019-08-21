@@ -87,18 +87,20 @@ df <- data.frame(year,pop,ScenA_spwn, ScenB_spwn)
 
 ```{r plot Figure S1 - ScenarioA and ScenarioB spwner abundances by substock,echo=FALSE,fig.width=6,fig.height=6}
 
+df$pop <- factor(df$pop, levels = c("LowerMainstem","Stewart","Pelly", "WhiteDonjek",
+                                    "MiddleMainstem","Carmacks","UpperLakesAndMainstem","Teslin"))
 
-ggplot(df, aes(x=ScenA_spwn/1000, y=ScenB_spwn/1000,color=as.factor(year))) +
+ggplot(df, aes(x=ScenA_spwn/1000, y=ScenB_spwn/1000,color=year)) +
   geom_point(size=2.5) +
   geom_abline(slope=1, intercept=0, lty="dotted") +
   xlab("Model-based spawners (000s)") +
   ylab("Data-based spawners (000s)") +
   labs(colour= "Year") +
-  facet_wrap(~pop,ncol=3,scales="free") +
+  coord_cartesian(xlim = c(0,20),ylim = c(0,20)) +
+  facet_wrap(~pop,ncol=2,scales="free") +
   theme_bw() +
-  theme(#legend.position = "none",
-        aspect.ratio = 1)
-# ggsave(file.path(figure_path, paste("Figure_S1.spawner.compare_",system_time,".pdf", sep="")),height = 5, width = 7)
+  theme(aspect.ratio = 1)
+ggsave(file.path(figure_path, paste("Figure_S1.spawner.compare_",system_time,".jpg", sep="")),height = 9, width = 7)
 
 ```
 
@@ -267,7 +269,7 @@ ggplot(bc3, aes(x=revised_julian, y = prop)) +
         axis.ticks.y = element_blank()) +
   geom_text(data = dat_text, mapping = aes(x = -Inf, y = -Inf, label = label),
             hjust = -0.3, vjust = -3, size=2.5)
-# ggsave(file.path(figure_path, paste("Figure_3.border.count_",system_time,".pdf", sep="")),height = 5, width = 7)
+ggsave(file.path(figure_path, paste("Figure_3.border.count_",system_time,".jpg", sep="")),height = 9, width = 9)
 ```
 
 
@@ -291,7 +293,7 @@ gsi4$year <- as.factor(gsi4$year)
 bc4$year <- as.factor(bc4$year)
 
 
-df <- full_join(bc4, gsi4) %>%
+dff <- full_join(bc4, gsi4) %>%
   mutate(diff = abs(round(bcprop - gsiprop,2))) %>%
   na.omit() %>%
   group_by(year) %>%
@@ -300,16 +302,16 @@ df <- full_join(bc4, gsi4) %>%
             max = max(diff)) %>%
   as.data.frame() 
 
-View(df)
-ggplot(df %>% filter(year > "1983"), aes(x=julian_date, y=diff)) +
+View(dff)
+ggplot(dff %>% filter(year > "1983"), aes(x=julian_date, y=diff)) +
   geom_bar(stat="identity") +
   facet_wrap(~year)
 
 round(quantile(df$mean,c(0.25,0.5,0.75)),2)
 
-df
+dff
 
-mean(df$mean)
+mean(dff$mean)
 
 ```
 
@@ -318,7 +320,7 @@ mean(df$mean)
 
 
 
-```{r  Prep Population border passage over time for ScenarioA Run Reconstruction, echo=FALSE}
+```{r  Prep Population border passage over time for Run Reconstruction, echo=FALSE}
 load("./data/runSize.Rdata")
 
 
@@ -405,38 +407,75 @@ ScenB_data <- full_join(ScenB_data1, infill_df) %>%
 
 ```{r Figure 7 - border passage by population over time, echo=FALSE, fig.dim=c(5,7)}
 # Plot ScenarioA population run proportions
-ggplot(ScenA_data, aes(x = as.factor(year), y = proportion*100)) + 
-  geom_bar(stat = "identity", colour = "black", fill="light grey", width= 1) +
+
+MyColor <- c("#440154FF", "#46337EFF", "#365C8DFF", "#277F8EFF", "#1FA187FF", "#4AC16DFF", "#9FDA3AFF", "#FDE725FF")
+
+ScenA_data$stock <- factor(ScenA_data$stock, levels = c("LowerMainstem","Stewart","Pelly","WhiteDonjek","MiddleMainstem",
+                                                                              "Carmacks","UpperLakesAndMainstem","Teslin"))
+
+
+ScenA_data <- ScenA_data %>%
+  mutate(Color = case_when(stock == "LowerMainstem" ~ "#440154FF",
+                           stock == "Stewart" ~ "#46337EFF",
+                           stock == "Pelly" ~ "#365C8DFF",
+                           stock == "WhiteDonjek" ~ "#277F8EFF",
+                           stock == "MiddleMainstem" ~ "#1FA187FF",
+                           stock == "Carmacks" ~ "#4AC16DFF",
+                           stock == "UpperLakesAndMainstem" ~ "#9FDA3AFF",
+                           stock == "Teslin" ~ "#FDE725FF"))
+
+
+ggplot(ScenA_data, aes(x = as.factor(year), y = proportion*100, fill= stock)) + 
+  geom_bar(stat = "identity", colour = "black", width= 1) +
+  scale_fill_manual(values = c("#440154FF", "#46337EFF", "#365C8DFF","#277F8EFF", "#1FA187FF", "#4AC16DFF","#9FDA3AFF", "#FDE725FF")) +
   geom_errorbar(data=ScenA_data, aes(ymin=lwr*100, ymax=upr*100), width=0.1) +
   geom_vline(xintercept = 2008, lty = "dotted") +
   xlab("Year") +
-  ylab("Population run size (%)") +
-  #scale_y_continuous(limits = c(0,100)) +
+  ylab("Run size (%)") +
   scale_x_discrete(breaks = c("1984","1988","1992","1996","2000","2004","2008","2012","2016")) +
   theme_bw() +
-  facet_wrap(~stock, ncol=3, scales = "free_y") +
+  facet_wrap(~stock, ncol=2, scales = "free_y") +
   theme(strip.text = element_text(size=10)) +
   theme(axis.text.x = element_text(angle=45, hjust=1)) +
   theme(axis.text = element_text(size=10)) +
   theme(axis.title = element_text(size=10))
-#ggsave(file.path(figure_path, paste("Figure_7.popn.passage_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+ggsave(file.path(figure_path, paste("Figure_7.popn.passage_ScenA_",system_time,".jpg", sep="")),height = 9, width = 7)
+
+
 
 
 # Plot ScenarioB population run proportions
-ggplot(ScenB_data, aes(x = as.factor(year), y = proportion*100)) + 
-  geom_bar(stat = "identity", fill="light grey",colour = "black", width=1) +
+
+ScenB_data$population <- factor(ScenB_data$population, levels = c("LowerMainstem","Stewart","Pelly","WhiteDonjek","MiddleMainstem",
+                                                                              "Carmacks","UpperLakesandMainstem","Teslin"))
+
+
+ScenB_data <- ScenB_data %>%
+  mutate(Color = case_when(population == "LowerMainstem" ~ "#440154FF",
+                           population == "Stewart" ~ "#46337EFF",
+                           population == "Pelly" ~ "#365C8DFF",
+                           population == "WhiteDonjek" ~ "#277F8EFF",
+                           population == "MiddleMainstem" ~ "#1FA187FF",
+                           population == "Carmacks" ~ "#4AC16DFF",
+                           population == "UpperLakesandMainstem" ~ "#9FDA3AFF",
+                           population == "Teslin" ~ "#FDE725FF"))
+
+
+ggplot(ScenB_data, aes(x = as.factor(year), y = proportion*100, fill = population)) + 
+  geom_bar(stat = "identity",colour = "black", width=1) +
+  scale_fill_manual(values = c("#440154FF", "#46337EFF", "#365C8DFF","#277F8EFF", "#1FA187FF", "#4AC16DFF","#9FDA3AFF", "#FDE725FF")) +
   geom_errorbar(data=ScenB_data, aes(x= as.factor(year), ymin= lwr*100, ymax=upr*100, width=.1)) +
   #geom_vline(xintercept = "2008", lty = "dotted") +
   xlab("Year") +
-  ylab("Population run size (%)") +
+  ylab("Run size (%)") +
   scale_x_discrete(breaks = c("1984","1988","1992","1996","2000","2004","2008","2012","2016")) +
   theme_bw() +
-  facet_wrap(~population, ncol=3, scales = "free_y") +
+  facet_wrap(~population, ncol=2, scales = "free_y") +
   theme(strip.text = element_text(size=10)) +
   theme(axis.text.x = element_text(angle=45, hjust=1)) +
   theme(axis.text = element_text(size=10)) +
   theme(axis.title = element_text(size=10))
-#ggsave(file.path(figure_path, paste("Figure_7.popn.passage_ScenB_",system_time,".pdf", sep="")),height = 5, width = 7)
+ggsave(file.path(figure_path, paste("Figure_7.popn.passage_ScenB_",system_time,".jpg", sep="")),height = 9, width = 7)
 
 ```
 
@@ -450,9 +489,9 @@ Scen_A_post_1 <- read.csv("data/Posterior_Samples_A_part1.csv")
 Scen_A_post_2 <- read.csv("data/Posterior_Samples_A_part2.csv")
 Scen_A_post_3 <- read.csv("data/Posterior_Samples_A_part3.csv")
 
+
 # bind the the parts into single dataframe
 ScenarioA_posteriors <- cbind(Scen_A_post_1, Scen_A_post_2, Scen_A_post_3)
-
 
 
 # load the 3 different parts of the Scenario B posterior file
@@ -711,8 +750,11 @@ equil_alpha_percentileB <- cbind(equil_product_B_perc,alpha_summary_B) %>%
 # dataframe used is equil_alpha_percentileA
 # head(equil_alpha_percentileA)
 
-
 # Scenario A
+equil_alpha_percentileA$pop <- factor(equil_alpha_percentileA$pop, levels = c("Lower Mainstem","Stewart","Pelly",
+                                                                              "White-Donjek","Middle Mainstem",
+                                                                              "Carmacks","Upper Lakes and Mainstem","Teslin"))
+
 ggplot(data = equil_alpha_percentileA, aes(x = equil_med/1000, y = alpha_med, fill=pop)) +
   geom_errorbar(data=equil_alpha_percentileA, mapping=aes(x=equil_med/1000, ymin=alpha_low, ymax=alpha_upr), color = "gray50") +
   geom_errorbarh(data=equil_alpha_percentileA, mapping=aes(x=alpha_med, xmin=equil_lwr/1000, xmax=equil_upr/1000), color = "gray50") +
@@ -726,12 +768,16 @@ ggplot(data = equil_alpha_percentileA, aes(x = equil_med/1000, y = alpha_med, fi
   theme(axis.title = element_text(size=12)) +
   theme(axis.text = element_text(size=12)) +
   theme(legend.title=element_blank())
-# ggsave(file.path(figure_path, paste("Figure_8.ScenA.product.equilibrium_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_8.ScenA.product.equilibrium_",system_time,".jpg", sep="")),height = 5, width = 7)
 
 
 
 
 # Scenario B
+equil_alpha_percentileB$pop <- factor(equil_alpha_percentileB$pop, levels = c("Lower Mainstem","Stewart","Pelly",
+                                                                              "White-Donjek","Middle Mainstem",
+                                                                              "Carmacks","Upper Lakes and Mainstem","Teslin"))
+
 ggplot(data = equil_alpha_percentileB, aes(x = equil_med/1000, y = alpha_med, fill=pop)) +
   geom_errorbar(data=equil_alpha_percentileB, mapping=aes(x=equil_med/1000, ymin=alpha_low, ymax=alpha_upr), color = "gray50") +
   geom_errorbarh(data=equil_alpha_percentileB, mapping=aes(x=alpha_med, xmin=equil_lwr/1000, xmax=equil_upr/1000), color = "gray50") +
@@ -745,7 +791,7 @@ ggplot(data = equil_alpha_percentileB, aes(x = equil_med/1000, y = alpha_med, fi
   theme(axis.title = element_text(size=12)) +
   theme(axis.text = element_text(size=12)) +
   theme(legend.title=element_blank())
-# ggsave(file.path(figure_path, paste("Figure_8.ScenB.product.equilibrium_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_S2.ScenB.product.equilibrium_",system_time,".jpg", sep="")),height = 5, width = 7)
 
 ```
 
@@ -908,6 +954,8 @@ Rec_and_Spwn_ScenB$BroodYear <- rep(c(1982:2009),times=8)
 
 ```{r Spawner recruit relationships ScenarioA, echo=FALSE}
 
+# head(alpha.beta_A)
+
 # create vector of abundances for each dataframe
 sp_YC <- as.vector(seq(0,20,length.out=100))
 sp_YlC <- as.vector(seq(0,20,length.out=100))
@@ -959,7 +1007,7 @@ alpha_beta_ScenA_sample <- alpha_beta_ScenA_sample[,c(4,1,3,7)]
 alpha_beta_ScenA_sample$abund <- NA
 alpha_beta_ScenA_sample$abund <- spw_df
 
-
+# shorten dataframe name for simplicity
 abScenA_samp <- alpha_beta_ScenA_sample
 
 
@@ -967,7 +1015,7 @@ abScenA_samp <- alpha_beta_ScenA_sample
 abScenA_samp$y <- NA
 abScenA_samp$y <- abScenA_samp$alpha_value*abScenA_samp$abund*exp(-abScenA_samp$beta_value*abScenA_samp$abund)
 
-
+# head(abScenA_samp)
 
 
 # 20 and 80 percentiles
@@ -976,8 +1024,6 @@ alpha_beta_percentileA <- abScenA_samp %>%
     dplyr::summarise(q_20 = quantile(y, probs=0.20),
                      q_80 = quantile(y, probs=0.8)) 
 
-
-head(abScenA_samp)
 
 ```
 
@@ -1051,50 +1097,57 @@ alpha_beta_percentileB <- abScenB_samp %>%
   group_by(population, abund) %>%
     dplyr::summarise(q_20 = quantile(y, probs=0.20),
                      q_80 = quantile(y, probs=0.8)) 
+
 ```
 
 
 
 
-```{r Figure 9 Plot Ricker curves ScenarioA, echo=FALSE, fig.dim=c(6,6)}
+```{r Figure 9 Plot Ricker curves ScenarioA, echo=FALSE, warning=FALSE,message=FALSE, fig.dim=c(6,6)}
 
 ggplot() +
-  geom_ribbon(data = alpha_beta_percentileA, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
-  geom_point(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, color=as.factor(BroodYear), width=0.9), size=2) +
+  geom_ribbon(data = alpha_beta_percentileA, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
+  geom_point(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, color=BroodYear, width=0.9), size=2) +
   geom_errorbar(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000, 
                                                  ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.2, size=0.3) +
   geom_errorbarh(data = Rec_and_Spwn_ScenA, aes(x= Spw_med/1000, y = Rec_med/1000,
-                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.2, size = 0.3) + 
+                                                xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.2, size = 0.3) +
   xlab("Spawners (000s)") +
   ylab("Recruits (000s)") +
-  facet_wrap(~population, ncol=3, scales = "free") +
+  facet_wrap(~population, ncol=2, scales = "free") +
   theme_bw() +
   theme(axis.title = element_text(size=12)) +
   theme(axis.text = element_text(size=10))
-# ggsave(file.path(figure_path, paste("Figure_9.Ricker_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_9.Ricker_ScenA_",system_time,".jpg", sep="")),height = 9, width = 7)
  
+
+# head(Rec_and_Spwn_ScenA)
+# head(alpha_beta_percentileA)
+
+# View(alpha_beta_percentileA)
+# View(Rec_and_Spwn_ScenA)
 ```
 
 
 
 
-```{r Figure 9 Plot Ricker curves ScenarioB, echo=FALSE, fig.dim=c(6,6)}
+```{r Figure 9 Plot Ricker curves ScenarioB, echo=FALSE, warning=FALSE,message=FALSE, fig.dim=c(6,6)}
 
 
 ggplot() +
-  geom_ribbon(data = alpha_beta_percentileB, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey70", alpha=0.5, linetype=2, colour="gray46") +
-  geom_point(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000, color=as.factor(BroodYear), width=0.9), size=2) +
+  geom_ribbon(data = alpha_beta_percentileB, aes(x = abund, ymin = q_20, ymax = q_80), fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
+  geom_point(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000, color=BroodYear, width=0.9), size=2) +
   geom_errorbar(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000, 
                                                  ymin = Rec_low/1000, ymax = Rec_upp/1000), colour="grey42", width=0.2, size=0.3) +
   geom_errorbarh(data = Rec_and_Spwn_ScenB, aes(x= Spw_med/1000, y = Rec_med/1000,
                                                 xmin = Spw_low/1000, xmax = Spw_upp/1000), colour = "grey42", width=0.2, size = 0.3) + 
   xlab("Spawners (000s)") +
   ylab("Recruits (000s)") +
-  facet_wrap(~population, ncol=3, scales = "free") +
+  facet_wrap(~population, ncol=2, scales = "free") +
   theme_bw() +
   theme(axis.title = element_text(size=12)) +
   theme(axis.text = element_text(size=10))
-# ggsave(file.path(figure_path, paste("Figure_9.Ricker_ScenB",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_9.Ricker_ScenB",system_time,".jpg", sep="")),height = 9, width = 7)
 
 ```
 
@@ -1111,26 +1164,26 @@ alpha_resid_df_A$population <- factor(alpha_resid_df_A$population, levels = c("L
                                                                               "White-Donjek","Middle Mainstem",
                                                                               "Carmacks","Upper Lakes and Mainstem","Teslin"))
 
-# MyColor <- c("#440154FF", "#482677FF","#39568CFF","#287D8EFF", "#20A387FF", "#29AF7FFF", "#B8DE29FF", "#FDE725FF")
+MyColor <- c("#440154FF","#46337EFF","#365C8DFF","#277F8EFF","#1FA187FF","#4AC16DFF","#9FDA3AFF","#FDE725FF")
 
-ggplot(alpha_resid_df_A, aes(x=year, y = alpha_med + resid_med), show.legend = F) + #, fill=population
-  geom_point(size=1,show.legend = F) + #, aes(colour = factor(population))
-  geom_line(show.legend = F) + #, aes(colour = factor(population))
-  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr), show.legend = F, alpha=0.4) + # , colour=factor(population)
-  scale_fill_viridis(option = "viridis", discrete = TRUE) +
+ggplot(alpha_resid_df_A, aes(x=year, y = alpha_med + resid_med, color=population), show.legend = F) +
+  geom_point(size=1,show.legend = F) + 
+  scale_color_manual(values = viridis(8), name=population) +
+  geom_line(show.legend = F) + 
+  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr), show.legend = F, alpha=0.4) +
+  scale_color_manual(values = viridis(8)) +
   geom_hline(yintercept = 0, lty = "dotted") +
   xlab("Brood year") +
   ylab("Productivity index") +
   scale_x_continuous(breaks=c(1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010, 2014)) +
   scale_y_continuous(limits=c(-6,6), breaks=c(-6,-3,0,3,6)) +
-  facet_wrap(~population, nrow=4) +  # ,scales = "free_y"
+  facet_wrap(~population, nrow=4) + 
   theme(legend.position = "none") +
   theme_bw() +
   theme(axis.text.x = element_text(angle=45, hjust = 1, size=10))
-# ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenA_",system_time,".jpg", sep="")),height = 9, width = 7)
 
 ```
-
 
 
 ```{r Figure 10. Productivity index over time - Scenario B, fig.dim=c(8,8)}
@@ -1141,25 +1194,26 @@ alpha_resid_df_B$population <- factor(alpha_resid_df_B$population, levels = c("L
                                                                               "White-Donjek","Middle Mainstem",
                                                                               "Carmacks","Upper Lakes and Mainstem","Teslin"))
 
-# MyColor <- c("#440154FF", "#482677FF","#39568CFF","#287D8EFF", "#20A387FF", "#29AF7FFF", "#B8DE29FF", "#FDE725FF")
-
-ggplot(alpha_resid_df_B, aes(x=year, y = alpha_med + resid_med), show.legend = F) + #, fill=population
-  geom_point(size=1,show.legend = F) + #, aes(colour = factor(population))
-  geom_line(show.legend = F) + #, aes(colour = factor(population))
-  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr), show.legend = F, alpha=0.4) + # , colour=factor(population)
-  scale_fill_viridis(option = "viridis", discrete = TRUE) +
+ggplot(alpha_resid_df_B, aes(x=year, y = alpha_med + resid_med, color=population), show.legend = F) +
+  geom_point(size=1,show.legend = F) + 
+  scale_color_manual(values = viridis(8), name=population) +
+  geom_line(show.legend = F) + 
+  geom_ribbon(aes(ymin=alpha_lwr + resid_lwr, ymax=alpha_upr + resid_upr), show.legend = F, alpha=0.4) +
+  scale_color_manual(values = viridis(8)) +
   geom_hline(yintercept = 0, lty = "dotted") +
   xlab("Brood year") +
   ylab("Productivity index") +
   scale_x_continuous(breaks=c(1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010, 2014)) +
   scale_y_continuous(limits=c(-8,8), breaks=c(-8,-4,0,4,8)) +
-  facet_wrap(~population, nrow=4) +  # ,scales = "free_y"
+  facet_wrap(~population, nrow=4) + 
   theme(legend.position = "none") +
   theme_bw() +
   theme(axis.text.x = element_text(angle=45, hjust = 1, size=10))
-#ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenB_",system_time,".pdf", sep="")),height = 5, width = 7)
+ggsave(file.path(figure_path, paste("Figure_10.Prod.index_ScenB_",system_time,".jpg", sep="")),height = 9, width = 7)
 
 ```
+
+
 
 
 
@@ -1183,7 +1237,7 @@ Umsy_B <- ScenarioB_posteriors[,17:24] %>%
 
 
 
-```{r Figure 11. Usmy posteriors, echo=FALSE, fig.dim=c(6,6)}
+```{r Figure 11. Usmy posteriors Scenario A, echo=FALSE, fig.dim=c(6,6)}
 
 # Scenario A
 Umsy_A$substock <- factor(Umsy_A$substock, levels = c("Lower Mainstem", "Stewart", "Pelly",
@@ -1202,11 +1256,12 @@ ggplot(Umsy_A, aes(x=substock, y=value, fill=substock)) +
   theme(axis.text.y = element_text(size=10)) +
   theme(axis.title = element_text(size=12)) +
   theme(legend.position="none")
-# ggsave(file.path(figure_path, paste("Figure_11.Umsy_ScenA_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_11.Umsy_ScenA_",system_time,".jpg", sep="")),height = 5, width = 7)
+```
 
 
 
-
+```{r Figure 11. Usmy posteriors Scenario B, echo=FALSE, fig.dim=c(6,6)}
 # Scenario B
 Umsy_B$substock <- factor(Umsy_B$substock, levels = c("Lower Mainstem", "Stewart", "Pelly",
                                                       "White-Donjek","Middle Mainstem", "Carmacks",
@@ -1225,12 +1280,118 @@ ggplot(Umsy_B, aes(x=substock, y=value, fill=substock)) +
   theme(axis.text.y = element_text(size=10)) +
   theme(axis.title = element_text(size=12)) +
   theme(legend.position="none")
-# ggsave(file.path(figure_path, paste("Figure_11.Umsy_ScenB_",system_time,".pdf", sep="")),height = 5, width = 7)
+#ggsave(file.path(figure_path, paste("Figure_11.Umsy_ScenB_",system_time,".jpg", sep="")),height = 5, width = 7)
 
 
 ```
 
+```{r Portfolio effects calculations, echo=FALSE}
 
+runSize$Stock <-lapply(runSize$stock, as.character)
+run_size_Carmacks <- rbind(runSize[runSize$Stock == "UpperLakesAndMainstem",],
+                           runSize[runSize$Stock == "Teslin",],
+                           runSize[runSize$Stock == "Carmacks",]
+                          )
+run_size_Teslin <- rbind(runSize[runSize$Stock == "Teslin",])
+                           
+# ---- Calculate running PE and CV -----------------------------------------------------#
+PE_running_avg_full <- matrix(NA, 21,1)
+PE_running_avg_Carmacks <- PE_running_avg_full
+CV_running_avg_full <- PE_running_avg_full
+CV_running_avg_Carmacks <- PE_running_avg_full
+CV_running_avg_Teslin <- PE_running_avg_full
+
+for (i in 1:21){
+  PE_running_avg_full[i,] <- PE_running(runSize, 1984 + i, 1994 + i)[1]
+  PE_running_avg_Carmacks[i,] <- PE_running(run_size_Carmacks, 1984 + i, 1994 + i)[1]
+  CV_running_avg_full[i,] <- PE_running(runSize, 1984 + i, 1994 + i)[2]
+  CV_running_avg_Carmacks[i,] <- PE_running(run_size_Carmacks, 1984 + i, 1994 + i)[2]
+  CV_running_avg_Teslin[i,] <- PE_running(run_size_Teslin, 1984 + i, 1994 + i)[2]
+  }
+```
+
+
+```{r Figure 12 Portfolio Effects, echo=FALSE}
+
+jpeg(file.path(figure_path, paste("Figure_12.portfolio_effects_",system_time,".jpg",sep="")),width=7.75, height=3.5, units="in",res=800)
+  
+  #dev.new(width=7.75, height=3.5,new=FALSE)
+  par(mfrow=c(1,2),bty="o", mar=c(3,4,1,3),oma=c(1.5,1,1,1))#set dimensions to plots
+  
+  plot(x = seq(1995,2015),
+       y = CV_running_avg_full,
+       ylim = c(0,0.85),
+       yaxt = "n",
+       xaxt = "n",
+       type = "l",
+       ylab = "CV in run-size",
+       xlab = "",
+       lwd = 2)
+  
+  axis(1)
+  axis(2,las=2)
+  box(col="grey")
+  
+  points(x = seq(1995,2015),
+         y = CV_running_avg_Carmacks,
+         type = "l",
+         lwd = 2,
+         col = "dark grey")
+  
+  points(x = seq(1995,2015),
+         y = CV_running_avg_Teslin,
+         type = "l",
+         lwd = 2,
+         col = "light grey")
+
+  text(x = 2005,
+       y = c(0.38,0.55,0.8),
+       labels = c("Dawson", "Carmacks","Teslin"),
+       col = c("black","dark grey","light grey"),
+       cex=c(0.85)) 
+  
+  text(x = 1996,
+       y=0.8,
+       labels=c("A"),
+       col = c("black"),
+       cex = c(1))
+  
+  plot(x = seq(1995,2015),
+       y = PE_running_avg_full,
+       ylim = c(0,0.5),
+       yaxt = "n",
+       xaxt = "n",
+       type = "l",
+       ylab = "Portfolio effect",
+       xlab = "",
+       lwd = 2)
+  
+  axis(1)
+  axis(2,las=2)
+  box(col="grey")
+  
+  points(x = seq(1995,2015),
+         y = PE_running_avg_Carmacks,
+         type = "l",
+         lwd = 2,
+         col = "dark grey")
+  text(x = 2005,
+       y = c(0.4,0.22),
+       labels = c("Dawson", "Carmacks"),
+       col = c("black","dark grey"),
+       cex=0.85) 
+    
+  text(x = 1996,
+       y=0.48,
+       labels=c("B"),
+       col = c("black"),
+       cex = 1)
+  
+    mtext("Year (last year of 10-year rolling window)",1,line=0.5, outer=T)
+
+dev.off()
+
+```
 
 
 
@@ -1401,7 +1562,7 @@ t3.3 <- t3.2 %>%
 
 
 
-```{r Figure 13 tradeoff plots Scenario A, echo=FALSE}
+```{r Figure 13 tradeoff plots Scenario A, echo=FALSE, message=FALSE,warning=FALSE, fig.dim=c(6,6)}
 # head(t3.3)
 
 # panel a: overfished
@@ -1430,7 +1591,7 @@ ggplot(t3.3, aes(x=U*100, y=med_V2/300)) +
 
 
 
-```{r Extirpation ScenA Figure 13 tradeoffs, echo=FALSE}
+```{r Extirpation Scenario A Figure 13 tradeoffs, echo=FALSE,message=FALSE,warning=FALSE, fig.dim=c(6,6)}
 
 # panel b: extirpated
 
