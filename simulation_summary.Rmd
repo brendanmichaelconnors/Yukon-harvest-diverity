@@ -1,9 +1,9 @@
 ---
 output:
-  html_document: default
+  pdf_document: default
   keep_tex: yes
   word_document: default
-  pdf_document: default
+  html_document: default
 ---
 
 ##CDN-Yukon harvest-diversity simulations
@@ -15,14 +15,17 @@ source("Load.R")
   t_harvest_rate <- seq(0,1,length.out=40) # range of US target commercial harvest rates
   BPG <- seq(1,100000,length.out=40) # range of border passage goals
   
-  pol.1x<-45000; pol.1x.ind <- which(abs((BPG)-pol.1x)==min(abs((BPG)-pol.1x)))
+  pol.1x<-48750; pol.1x.ind <- which(abs((BPG)-pol.1x)==min(abs((BPG)-pol.1x)))
   pol.1y<-0.2; pol.1y.ind <- which(abs((t_harvest_rate)-pol.1y)==min(abs((t_harvest_rate)-pol.1y)))
   
-  pol.2x<-20000; pol.2x.ind <- which(abs((BPG)-pol.2x)==min(abs((BPG)-pol.2x)))
-  pol.2y<-0.8; pol.2y.ind <- which(abs((t_harvest_rate)-pol.2y)==min(abs((t_harvest_rate)-pol.2y)))
+  pol.2x<-50000; pol.2x.ind <- which(abs((BPG)-pol.2x)==min(abs((BPG)-pol.2x)))
+  pol.2y<-0.98; pol.2y.ind <- which(abs((t_harvest_rate)-pol.2y)==min(abs((t_harvest_rate)-pol.2y)))
 
+  pol.3x<-85000; pol.3x.ind <- which(abs((BPG)-pol.3x)==min(abs((BPG)-pol.3x)))
+  pol.3y<-0.8; pol.3y.ind <- which(abs((t_harvest_rate)-pol.3y)==min(abs((t_harvest_rate)-pol.3y)))
+  
 # load simulation output
-  outcomes <- readRDS("./outputs/base_sims.ricker")
+  outcomes <- readRDS("./outputs/base_sims.BH")
   
   outcomes.med <- apply(outcomes,c(1,2,3),quantile,probs=c(0.5),na.rm=T)
   outcomes.upper <- apply(outcomes,c(1,2,3),quantile,probs=c(0.75),na.rm=T)
@@ -62,10 +65,16 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
 
-#panel b - harvest
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)
+  
+  #panel b - harvest
   xx<-as.table((outcomes.med[,2,]/1000))
   colnames(xx)<-((t_harvest_rate))
   rownames(xx)<-((BPG/1000))
@@ -86,9 +95,15 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
 
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)
+  
 #panel c - harvest rate
   xx<-as.table(outcomes.med[,3,]*100)
   colnames(xx)<-((t_harvest_rate) )
@@ -112,10 +127,16 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,zlim=c(0,100),col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
 
-#panel d - overfished
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)
+
+  #panel d - overfished
   xx<-as.table(outcomes.med[,4,]*100)
   colnames(xx)<-((t_harvest_rate) )
   rownames(xx)<-((BPG/1000) )
@@ -138,10 +159,16 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,zlim=c(0,100),col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
-  
-#panel e - extirpated
+
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)  
+
+  #panel e - extirpated
   xx<-as.table(outcomes.med[,6,]*100)
   colnames(xx)<-((t_harvest_rate) )
   rownames(xx)<-((BPG/1000) )
@@ -164,8 +191,14 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,zlim=c(0,100),col=viridis(100),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
+
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)  
 
 #panel f - CV
   xx<-as.table(1/outcomes.med[,9,])
@@ -188,9 +221,15 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,col=rev(viridis(100)),legend.width = 2)
     box(col="black")
     
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
-  
+
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)  
+
 #panel g - meet CDN FN needs
   xx<-as.table(outcomes.med[,8,]*100)
   colnames(xx)<-((t_harvest_rate))
@@ -212,8 +251,14 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
+
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)  
 
 #panel h - meet US sub needs
   xx<-as.table(outcomes.med[,7,]*100)
@@ -236,9 +281,14 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
-  
+
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
+
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)  
 
 #panel i - trib goals
   xx<-as.table(outcomes.med[,10,]*100)
@@ -259,23 +309,33 @@ par(mfrow=c(3,3),bty="o", mar=c(2,2,2,5),oma=c(2,2,1,1))
   image(xx,yy,zz,axes=F,ylab="",xlab="",zlim=c(0,100))
     axis(1,las=1)
     axis(2,las=2, labels = F)
-    mtext("(i) Chance tributary goals met (%)",3,cex=0.9,line=0.5,adj=0)
+    mtext("(i) Chance population goals met (%)",3,cex=0.9,line=0.5,adj=0)
   image.plot(xx,yy,zz,axes=F,add=T,legend.mar=3,zlim=c(0,100),col=rev(viridis(100)),legend.width = 2)
     box(col="black")
   
-  points(pol.1x/1000,pol.1y,pch=21,cex=2.2,bg="grey",lwd=2)
+  points(pol.1x/1000,pol.1y,pch=21,cex=2.8,bg="grey",lwd=2)
   text(pol.1x/1000,pol.1y,"1",cex=0.8)
 
+  points(pol.2x/1000,pol.2y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.2x/1000,pol.2y,"2",cex=0.8)
 
-mtext("Border passage goal (000s)",1,outer=T,cex=1.1,lin=0.75)
-mtext("US commercial harvest rate (%)",side=2,outer=T,cex=1.1,line=0.75)
+  points(pol.3x/1000,pol.3y,pch=21,cex=2.8,bg="grey",lwd=2)
+  text(pol.3x/1000,pol.3y,"3",cex=0.8)  
+
+mtext("Escapement goal (000s)",1,outer=T,cex=1.1,lin=0.75)
+mtext("Harvest rate on surplus (%)",side=2,outer=T,cex=1.1,line=0.75)
 ```
 Figure 1. **Predicted consequences of alternative harvest policies**. Each policy is defined by a combination of basin scale harvest (y-axis) and escapement goals (x-axis). Performance measures (z-axis) are calculated over the last 20 years of each Monte Carlo trial (500 in total), which project stock dynamics 50 years forward in time, and correspond to (A) median harvest (in thousands of Chinook salmon), (B) harvest stability (1/ coefficient of variation [CV] in harvest), (C) proportion of sub-stock tributaries with spawner abundances that exceeded a tributary specific spawner target (S~MSY~) and (D) proportion of sub-stocks extirpated. Three illustrative harvest policies are overlaid on each panel: (1) a policy that seeks to maximize yield, (2) a fixed harvest policy corresponding to minimum subsistence needs and (3) a policy that seeks to reduce biological risks to sub-stocks while also achieving relatively high harvests. 
 
 ```{r  fig2, echo=FALSE,fig.height = 5, fig.width = 9, fig.align = "center"}
 
+outcomes.med[,c(3:8,10),] <- outcomes.med[,c(3:8,10),] *100
+outcomes.upper[,c(3:8,10),] <- outcomes.upper[,c(3:8,10),] *100
+outcomes.lower[,c(3:8,10),] <- outcomes.lower[,c(3:8,10),] *100
+
+
 # extract two constrasting policies and associated PMs
-pol.1 <- cbind(rep("pol_1",10),
+pol.1 <- cbind(rep("Status quo",10),
                c("Escapement", 
                  "Harvest",
                  "Harvest rate",
@@ -285,12 +345,12 @@ pol.1 <- cbind(rep("pol_1",10),
                  "Chances US subsistence met (%)",
                  "Chances CDN FN harvest met (%)",
                  "Harvest stability (1/CV)",
-                 "Trib. goals met (%)"),
+                 "Pop. goals met (%)"),
                outcomes.med[pol.1x.ind,,pol.1y.ind],
                outcomes.upper[pol.1x.ind,,pol.1y.ind],
                outcomes.lower[pol.1x.ind,,pol.1y.ind])
 
-pol.2 <- cbind(rep("pol_2",10),
+pol.2 <- cbind(rep("MSY",10),
                c("Escapement", 
                  "Harvest",
                  "Harvest rate",
@@ -300,19 +360,34 @@ pol.2 <- cbind(rep("pol_2",10),
                  "Chances US subsistence met (%)",
                  "Chances CDN FN harvest met (%)",
                  "Harvest stability (1/CV)",
-                 "Trib. goals met (%)"),
+                 "Pop. goals met (%)"),
                outcomes.med[pol.2x.ind,,pol.2y.ind],
                outcomes.upper[pol.2x.ind,,pol.2y.ind],
                outcomes.lower[pol.2x.ind,,pol.2y.ind])
 
-pms <- as.data.frame(rbind(pol.1[-5,],pol.2[-5,]))
+pol.3 <- cbind(rep("Conservation",10),
+               c("Escapement", 
+                 "Harvest",
+                 "Harvest rate",
+                 "Overfished (%)", 
+                 "% pred. extrinct",
+                 "Extirpated (%)",
+                 "Chances US subsistence met (%)",
+                 "Chances CDN FN harvest met (%)",
+                 "Harvest stability (1/CV)",
+                 "Pop. goals met (%)"),
+               outcomes.med[pol.3x.ind,,pol.3y.ind],
+               outcomes.upper[pol.3x.ind,,pol.3y.ind],
+               outcomes.lower[pol.3x.ind,,pol.2y.ind])
+
+pms <- as.data.frame(rbind(pol.1[-5,],pol.2[-5,],pol.3[-5,]))
 colnames(pms)<-c("policy","performance_measure","med","upper","lower")
 
 for(i in 3:5){pms[,i] <- as.numeric(as.character(pms[,i]))}
 
 ggplot(pms,aes(x=policy, y=med))+
   facet_wrap(~performance_measure, scales = "free_y")+
-  geom_col(fill=c(rep(c("#440154FF","#FDE725FF"),9)))+
+  geom_col(fill=c(rep(c("#440154FF","#21908CFF","#FDE725FF"),9)))+
   geom_errorbar(aes(ymin=lower,ymax=upper), width=0)+
   xlab("Policy")+
   ylab("")+

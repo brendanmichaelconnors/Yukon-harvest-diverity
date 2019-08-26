@@ -23,18 +23,33 @@
 
 hcr = function(run, BPG, US_sub, CDN_sub, US_com_U ,for_error, US_com_error, US_sub_error, BP_error, CDN_sub_error){
     run.est <- run * rlnorm(1, 0, for_error)
-    TAC <- run.est - BPG
+    TAC <- ifelse(run.est - BPG < 0, 0, run.est - BPG)
     CDN_TAC <- ifelse(TAC < 110, 0.24*TAC, ((0.24*TAC)+0.5*(TAC-110)))
     US_TAC = TAC - CDN_TAC
     pot_com_fish <- ifelse(US_TAC-US_sub > 0, US_TAC-US_sub, 0)
     US_com_catch <- US_com_U * (pot_com_fish) * rlnorm(1, 0, US_com_error)
     US_sub_catch_1 <- US_sub * rlnorm(1, 0, US_sub_error)
-    US_sub_catch <- ifelse(US_sub_catch_1 > run-US_com_catch, run-US_com_catch, US_sub_catch_1)
-  	border_passage = (run - US_com_catch-US_sub_catch) * rlnorm(1, 0, BP_error)
-  	CDN_sub_catch_1 <- CDN_sub * rlnorm(1, 0, CDN_sub_error)
-  	CDN_sub_catch <- ifelse(CDN_sub_catch_1 > border_passage, border_passage, CDN_sub_catch_1)
-  	escapement <- border_passage - CDN_sub_catch
-	return(c(US_com_catch, US_sub_catch, border_passage, CDN_sub_catch, escapement))
+    US_sub_catch <- ifelse(US_sub_catch_1 > US_TAC-US_com_catch, US_TAC-US_com_catch, US_sub_catch_1)
+  	border_passage_est <- (run - US_com_catch-US_sub_catch) * rlnorm(1, 0, BP_error); 
+  	border_passage_est[!is.finite(border_passage_est)] <- 0
+   	border_passage_est  <- ifelse(border_passage_est < 0, 0, border_passage_est)
+  	border_passage <- (run - US_com_catch-US_sub_catch)
+  	border_passage  <- ifelse(border_passage < 0, 0, border_passage)
+		if(border_passage_est < 42500 ){CDN_sub_catch_1 = 0}else{
+			if(border_passage_est < 48750 ){CDN_sub_catch_1 = 1000}else{
+				if(border_passage_est < 55000 ){CDN_sub_catch_1 = 4000}else{
+					CDN_sub_catch_1 = CDN_sub
+				}
+			}
+		}
+  	CDN_sub_catch <- CDN_sub_catch_1 * rlnorm(1, 0, CDN_sub_error)
+  	
+  	CDN_com_catch <- min(US_com_U * (border_passage_est - CDN_sub_catch - BPG) * rlnorm(1, 0, US_com_error),
+  						US_com_U * (border_passage - CDN_sub_catch ) * rlnorm(1, 0, US_com_error))
+  	
+  	CDN_com_catch <- ifelse(CDN_com_catch < 0, 0 , CDN_com_catch)
+  	escapement <- border_passage - CDN_sub_catch - CDN_com_catch
+	return(c(US_com_catch, US_sub_catch, border_passage, CDN_sub_catch, escapement, CDN_com_catch))
 }
 
 
@@ -67,7 +82,7 @@ SC.eq <- function(U,a,b){
 # pm.yr <- year of simulation that pms start to be calculated over
 # Rec <- estimated recruitments from last years of empirical data 
 # Spw <- estimated spawers from last years of empirical data
-# lst.resid <- estimated recruitment deviation from last year of empirical data
+# last.resid <- estimated recruitment deviation from last year of empirical data
 # SR_rel <- structural form of the SR relationship ("Ricker" or "Beverton-Holt")
 # t_harvest_rate <- target harvest rate on US commercial catch
 
@@ -75,14 +90,16 @@ SC.eq <- function(U,a,b){
 # period <- period of enviro forcing cycle if SR_rel = "Beverton-Holt"
 # alpha_scalar <- alpha scalar if using BH spawner-recruit formulation
 
-process = function(ny,vcov.matrix,phi,mat,alpha,beta,BPG,pm.yr,Rec,Spw,lst.resid,SR_rel,t_harvest_rate){
+process = function(ny,vcov.matrix,phi,mat,alpha,beta,BPG,pm.yr,Rec,Spw,last.resid,SR_rel,t_harvest_rate){
 	ns = length(alpha) #number of sub-stocks
 	m.alpha <- alpha
 	m.beta <- beta
 
 	# create vectors of time varying alpha
 	if (SR_rel == "Beverton-Holt"){ 
-	  alpha <- alpha* alpha_scalar
+	  alpha <- alpha* 1.4
+	  period <- 14
+	  BH.alpha.CV <- 0.6
 	  beta.tim <- (alpha/beta)*exp(-1)
 	  alpha.time <- matrix(NA,ny,length(alpha))
 	  for (t in 1:ny){
@@ -106,7 +123,7 @@ process = function(ny,vcov.matrix,phi,mat,alpha,beta,BPG,pm.yr,Rec,Spw,lst.resid
 	predR = Ntot
 	
 	# populate first few years with realized states
-	R[4,] = alpha[]*S[4,]*exp(-beta[]*S[4,]+(phi*lst.resid)+epi[4,])
+	R[4,] = alpha[]*S[4,]*exp(-beta[]*S[4,]+(phi*last.resid)+epi[4,])
 	predR[4,] = alpha[]*S[4,]*exp(-beta[]*S[4,])
 	v[4,] = log(R[4,])-log(predR[4,])
 	v[v[,]=='NaN'] <- 0
@@ -134,7 +151,7 @@ process = function(ny,vcov.matrix,phi,mat,alpha,beta,BPG,pm.yr,Rec,Spw,lst.resid
 		# apply harvest control rule
 		run.size <- sum(Ntot[i,])
 		hcr_outcomes <- hcr(run.size, BPG, US_sub, CDN_sub, t_harvest_rate ,for_error, US_com_error, US_sub_error, BP_error, CDN_sub_error )
-		hcr_exploit <- sum(hcr_outcomes[c(1,2,4)])/run.size
+		hcr_exploit <- sum(hcr_outcomes[c(1,2,4,6)])/run.size
 		USsub[i] <- hcr_outcomes[2]
 		CDNFN[i] <- hcr_outcomes[4]
 		H[i,] =  hcr_exploit*Ntot[i,]
