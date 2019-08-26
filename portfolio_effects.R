@@ -32,6 +32,17 @@ for (i in 1:21){
   CV_running_avg_Teslin[i,] <- PE_running(run_size_Teslin, 1984 + i, 1994 + i)[2]
   }
 
+# ---- How much more stable is aggregate than individual pops?  -----------------------#
+CV_ind <- matrix(NA, 8,1)
+
+for (i in unique(runSize$stock)){
+  CV_ind[i] <-PE_running(runSize[runSize$stock==i,], 1984 , 2016)[2]
+}
+
+CV_avg_all <- mean(CV_ind[9:16]); sd(CV_ind[9:16])  # mean and SD across individual pops
+CV_agg <- PE_running(runSize, 1984 , 2016)[2] # realized CV integrated across all pops
+CV_avg_all/CV_agg # magnitude of variance dampending
+
 # ---- Figure of  PE and CV -----------------------------------------------------------#
 
 jpeg("figures/Figure_12.portfolio_effects.jpeg",width=7.75, height=3.5, units="in",res=800)
