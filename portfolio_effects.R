@@ -9,7 +9,7 @@
 ########################################################################################
 
 # ---- Chose RR data to use -----------------------------------------------------------#
-load("./data/runSize.Rdata")
+load("./data/borderPassage-mod2.Rdata")
 runSize$Stock <-lapply(runSize$stock, as.character)
 run_size_Carmacks <- rbind(runSize[runSize$Stock == "UpperLakesAndMainstem",],
                            runSize[runSize$Stock == "Teslin",],
