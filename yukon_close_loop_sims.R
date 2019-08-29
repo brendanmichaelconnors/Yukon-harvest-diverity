@@ -8,12 +8,12 @@
 ########################################################################################
 
 # --- Set common conditions for simulations  --------------------------------------------
-num.sims <- 10 # number of Monte Carlo trials
+num.sims <- 500 # number of Monte Carlo trials
 ny <- 50 # number of years in forward simulation
 pm.yr <- ny-20
 
-US_sub <- 30000 # US subsistence target
-CDN_sub <- 15000 # CDN basic needs allocation target
+US_sub <- 20000 # US subsistence target
+CDN_sub <- 10000 # CDN basic needs allocation target
 for_error <- 0.2 # log-normal forecast error
 US_com_error <- 0.1 # log-normal outcome uncertianty in US commerical harvest
 US_sub_error <- 0.05 # log-normal outcome uncertianty in US subsistence harvest
@@ -30,7 +30,7 @@ sim.outcomes.spw.time <- array(NA,dim=c(ny,8,length(BPG),length(t_harvest_rate),
 # --- Stationary Ricker SR dynamics ----------------------------------------------------
 
 # set structural form of SR relationship
-  SR_rel <-  "Ricker" 
+  SR_rel <-  "Beverton-Holt" 
   #dir.SR <- "F"
   #SR_devs <- array(1,dim=c(ny,2,13))
 
@@ -46,12 +46,12 @@ sim.outcomes.spw.time <- array(NA,dim=c(ny,8,length(BPG),length(t_harvest_rate),
                        phi = process.iteration(samps[draw,])$phi,
                        mat = process.iteration(samps[draw,])$pis,
                        alpha = process.iteration(samps[draw,])$alpha,
-                       beta = process.iteration(samps[draw,])$beta / 1000,
+                       beta = process.iteration(samps[draw,])$beta ,
                        BPG = BPG[k],
                        pm.yr = pm.yr,
-                       Rec = process.iteration(samps[draw,])$R * 1000,
-                       Spw = process.iteration(samps[draw,])$S * 1000,
-                       lst.resid = process.iteration(samps[draw,])$last_resid,
+                       Rec = process.iteration(samps[draw,])$R ,
+                       Spw = process.iteration(samps[draw,])$S ,
+                       last.resid = process.iteration(samps[draw,])$last_resid,
                        SR_rel = SR_rel, 
                        t_harvest_rate = t_harvest_rate[w])
         sim.outcomes[k,,w,l] <- out$PMs
@@ -60,7 +60,6 @@ sim.outcomes.spw.time <- array(NA,dim=c(ny,8,length(BPG),length(t_harvest_rate),
     }
   }
   
-saveRDS(sim.outcomes,"./outputs/base_sims.ricker")  
-saveRDS(sim.outcomes.spw.time,"./outputs/base_sims_projections.ricker")  
+saveRDS(sim.outcomes,"./outputs/base_sims.BH")  
+saveRDS(sim.outcomes.spw.time,"./outputs/base_sims_projections.BH")  
 
-  
