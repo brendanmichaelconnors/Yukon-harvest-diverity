@@ -8,7 +8,7 @@ library(R2jags)
 #library(modeest) 
 library(gplots)
 library(knitr)
-library(rdrop2)
+#library(rdrop2)
 library(viridis)
 
 
