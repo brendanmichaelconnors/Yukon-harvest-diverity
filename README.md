@@ -5,4 +5,4 @@ Code to chanracterize CDN-origin Yukon Chinook populaiton diveristy and run clos
 
 Posterior samples required to parameterize the closed loop simulations are available upon request from brendan.connors@dfo-mpo.gc.ca 
 
-Project made possible by grant 1503 from the [Arctic-Yukon-Kuskokwim Sustainable Salmon Initiative](https://www.aykssi.org/)
+Project made possible by grant 1701 from the [Arctic-Yukon-Kuskokwim Sustainable Salmon Initiative](https://www.aykssi.org/)
